@@ -36,7 +36,7 @@ Mes hypothèses par défaut : `→ défaut proposé`. *(Tout le bloc « seuils /
 3. Maille la plus fine = le **lot**, ou faut-il gérer des sous-conditionnements (sacs, fûts) ? `→ défaut : maille = lot`.
 
 ### 1.2 Qualité / CoA (version simple)
-4. Le **CoA Circul'Egg** est-il **généré par l'outil** (PDF charté à partir de valeurs saisies) ou **uploadé** (PDF produit ailleurs, juste attaché) ? `→ défaut v1 : uploadé/attaché ; génération PDF chartée en V2`.
+4. Le **CoA Circul'Egg** est-il **généré par l'outil** ou **uploadé** ? → **DÉCIDÉ : uploadé/attaché** (c'est toi qui attaches le PDF). Génération PDF chartée renvoyée en V2.
 5. Quels **champs veux-tu au minimum voir saisis** sur un lot pour t'aider à décider à l'œil (même sans seuil) ? cf. §4 — liste de champs **informatifs**, non bloquants.
 6. Statuts lot suffisants : `En attente` / `En cours` / `Libéré` / `Bloqué` / `Refusé` ? `→ défaut : oui`.
 
@@ -46,14 +46,14 @@ Mes hypothèses par défaut : `→ défaut proposé`. *(Tout le bloc « seuils /
 9. **Alerte stock bas** : par gamme×origine, seuil paramétrable saisi à la main ? `→ défaut : oui`. *(C'est une alerte de confort, pas une règle bloquante.)*
 
 ### 1.4 Commandes & appro
-10. **Commandes clients** : déjà gérées ailleurs à réutiliser, ou à créer ici ? 
+10. **Commandes clients** : déjà gérées ailleurs, ou créées ici ? → **DÉCIDÉ : saisies directement dans l'outil par les Sales.**
 11. **Réservation** de stock à la commande, ou allocation seulement au départ ? `→ défaut : réservation à la commande, décrément au départ`.
 12. **Arrivées prévues** : saisie manuelle avec date prévue + suivi retard ? `→ défaut : oui`.
 
 ### 1.5 Départs / expéditions
 13. **Transporteurs** : Colissimo seul au MVP ? `→ défaut : Colissimo, modèle extensible`.
 14. **Tracking** : saisie manuelle du n° de suivi (API transporteur en V2) ? `→ défaut : manuel`.
-15. **Échantillons** : quantité type (50 g ?), prélevés sur quel lot, gratuit/facturé ? `→ défaut : prélevé sur lot Libéré, quantité libre, tracé`.
+15. **Échantillons** : → **DÉCIDÉ : gratuits. C'est le demandeur (Sales) qui précise la quantité ; le formulaire propose 50 g par défaut mais reste modifiable (souvent plus).** Prélevés sur un lot Libéré, tracés.
 16. Un départ peut **mixer plusieurs lots/gammes** dans un colis ? `→ défaut : oui, multi-lignes`.
 17. **Documents joints** au colis : BL + CoA générés/attachés automatiquement ? `→ défaut : BL simple + CoA attaché`.
 
