@@ -51,13 +51,14 @@
 - ⬜ Validation end-to-end de l'écriture une fois Supabase branché (bucket `coa`).
 - **Jalon J2** : réception + stock opérationnels.
 
-### Sprint 2 — Qualité & Libération *(rôle Qualité)* — cœur de la valeur
+### Sprint 2 — Qualité & Libération *(rôle Qualité)* — ✅ livré (code) — cœur de la valeur
 **But :** un humain libère un lot, et ça débloque la vente.
-- **File des lots** (`en_attente`/`en_cours`).
-- **Fiche lot qualité** : CoA fournisseur, **upload CoA Circul'Egg**, champs infos facultatifs.
-- Boutons **Libérer / Bloquer / Refuser** + commentaire.
-- Règle auto **`disponible_vente = (statut = libéré)`** propagée au stock/aux allocations.
-- **Journal d'audit** (libérations, mouvements).
+- ✅ **File des lots** (`en_attente`/`en_cours`), les plus anciens d'abord.
+- ✅ **Fiche lot qualité** : infos lot + liens de téléchargement signés du CoA fournisseur, **upload CoA Circul'Egg** (passe le lot en « en cours »), champs infos facultatifs (`coa_infos`).
+- ✅ Boutons **Libérer / Bloquer / Refuser** + commentaire (server action, déplacement d'emplacement best-effort).
+- ✅ Règle **`disponible_vente = (statut = libéré)`** propagée au stock — *validée bout-en-bout sur Postgres réel : avant libération dispo=0, après dispo=quantité.*
+- ✅ **Journal d'audit** sur chaque décision (avant/après en jsonb).
+- ⬜ Validation end-to-end via l'app une fois Supabase branché.
 - **Jalon J3** : boucle qualité complète (réception → libération).
 
 ### Sprint 3 — Départs & Commandes *(rôles Sales + Équipe départ)* → **MVP complet**

@@ -98,6 +98,19 @@ th { color: var(--muted); font-weight: 600; }
 }
 .field input:focus, .field select:focus { outline: 2px solid var(--accent); border-color: var(--brand); }
 .field input[type='file'] { padding: 8px; background: #fff; }
+.field textarea {
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px;
+  background: #fff; width: 100%; font-family: inherit; resize: vertical; min-height: 70px;
+}
+.field textarea:focus { outline: 2px solid var(--accent); border-color: var(--brand); }
+.btn.warn { background: var(--warn); }
+.btn.warn:hover { background: #93610b; }
+.btn.danger { background: var(--danger); }
+.btn.danger:hover { background: #9c2f22; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.dl { display: grid; grid-template-columns: 180px 1fr; gap: 8px 16px; font-size: 14px; }
+.dl dt { color: var(--muted); }
+.dl dd { margin: 0; }
 .error { color: var(--danger); font-size: 13px; margin-top: 4px; }
 
 .roles-line { display: flex; gap: 6px; flex-wrap: wrap; }
