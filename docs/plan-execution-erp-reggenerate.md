@@ -34,12 +34,13 @@
 
 ### Sprint 0 — Fondations *(socle technique)*
 **But :** l'app est en ligne, on se logue, le référentiel existe.
-- Projet Supabase + schéma Postgres (toutes les tables du §2 du CDC).
-- **Supabase Auth** + table profils + **RLS** des 5 rôles.
-- Squelette **Next.js PWA** + déploiement **Vercel** (CI branche → preview).
-- **Supabase Storage** (bucket CoA/BL).
-- CRUD **référentiel** (gammes, origines, fournisseurs, clients, adresses) + seed des données réelles.
-- **Jalon J1** : socle en ligne, login OK, référentiel saisi.
+- ✅ **Schéma Postgres livré** (`supabase/migrations/0001_schema.sql`) : toutes les tables, types énumérés, génération auto du n° de lot, vue stock, triggers.
+- ✅ **RLS des 5 rôles livrée** (`0002_rls.sql`) + **seed** gammes/origines/zones/transporteur (`seed.sql`). *Validé sur un vrai Postgres.*
+- ⬜ Créer le **projet Supabase** distant + appliquer les migrations (`supabase db push`) + bucket **Storage** `coa`.
+- ⬜ Créer les **utilisateurs** (Supabase Auth) et affecter leurs rôles.
+- ⬜ Squelette **Next.js PWA** + déploiement **Vercel** (login Supabase).
+- **Jalon J1** : socle en ligne, login OK, référentiel en base.
+- *Décisions actées : rôles génériques (sans prénom), pas de table Fournisseur (pays suffit), clients créés dans l'outil, n° de lot `REG-{GAMME}-{ORIGINE}-{AAMMJJ}-{seq}`.*
 
 ### Sprint 1 — Stock & Réception *(rôle Prod/Ops)*
 **But :** on entre des lots et on voit le stock.

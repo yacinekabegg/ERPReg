@@ -65,33 +65,35 @@ Mes hypothèses par défaut : `→ défaut proposé`. *(Tout le bloc « seuils /
 
 ## 2. Modèle de données (simplifié)
 
-Entité pivot : **Lot**. Référentiel Clients/Fournisseurs commun.
+Entité pivot : **Lot**. Clients créés dans l'outil ; pas de table Fournisseur (le n° de lot fournisseur est un champ texte).
 
 ### 2.1 Vue d'ensemble
 
 ```
 Gamme ─┐
-Origine─┼─< Lot >─── coa_fournisseur_pdf   (fichier)
-Fournisseur┘   │  └── coa_circuegg_pdf      (fichier)
-               │      + statut posé À LA MAIN par Qualité
-               │
-               ├──< MouvementStock >── Emplacement
-               │
-               └──< LigneDepart >── DemandeDepart ──< Expedition >── Transporteur
-                                          │
-Client ──< AdresseLivraison >─────────────┘
+Origine─┴─< Lot >─── coa_fournisseur_pdf   (fichier)
+           │  └── coa_circuegg_pdf         (fichier)
+           │      + statut posé À LA MAIN par Qualité
+           │  (n° lot fournisseur = simple texte, pas de table Fournisseur)
+           │
+           ├──< MouvementStock >── Emplacement
+           │
+           └──< LigneDepart >── DemandeDepart ──< Expedition >── Transporteur
+                                      │
+Client ──< AdresseLivraison >─────────┘
 Client ──< CommandeClient >──< LigneCommande >
-Fournisseur ──< CommandeFournisseur >  (arrivées prévues + retard)
+Origine ──< CommandeFournisseur >  (arrivées prévues + retard, par gamme×origine)
 Utilisateur (Supabase Auth) ── role
 JournalAudit  (actions sensibles)
 ```
+
+> **Décisions référentiel actées :** pas de table **Fournisseur** (le **pays d'origine** suffit ; le n° de lot fournisseur reste un champ texte libre sur le lot). Pas de **clients** pré-chargés — ils sont créés dans l'outil par les Sales. **Rôles définis génériquement** (par fonction, sans nom de personne).
 
 ### 2.2 Tables & attributs
 
 **Gamme** — `id, nom (Standard/Plus/Bio/Plein Air), code, actif`
 **Origine** — `id, pays (France/Espagne/Turquie), code, actif`
-**Fournisseur** — `id, raison_sociale, siret, contact, email, tel, pays`
-**Client** — `id, raison_sociale, siret, secteur (nutra/cosméto/petfood), contact, email, tel`
+**Client** — `id, raison_sociale, siret, secteur (nutra/cosméto/petfood), contact, email, tel` *(créés dans l'outil, pas de pré-chargement)*
 **AdresseLivraison** — `id, client→, libellé, ligne1, ligne2, cp, ville, pays, par_defaut`
 
 **Lot** *(pivot)*
@@ -99,8 +101,8 @@ JournalAudit  (actions sensibles)
 |---|---|---|
 | id | PK | |
 | numero_lot_CE | texte unique | |
-| numero_lot_fournisseur | texte | |
-| gamme, origine, fournisseur | FK | |
+| numero_lot_fournisseur | texte | champ libre (pas de table Fournisseur) |
+| gamme, origine | FK | |
 | date_reception, dluo | date | |
 | quantite_recue | numeric (kg) | |
 | quantite_stock | numeric | recalculé depuis MouvementStock (vue) |
@@ -119,7 +121,7 @@ JournalAudit  (actions sensibles)
 **CommandeClient** — `id, numero, client→, adresse_livraison→, date_commande, date_souhaitee, statut (brouillon/confirmee/en_preparation/expediee/cloturee/annulee)`
 **LigneCommande** — `id, commande→, gamme→, origine_souhaitee→, quantite, lot_alloue→`
 
-**CommandeFournisseur (appro)** — `id, numero, fournisseur→, gamme→, origine→, quantite_attendue, date_commande, date_prevue, date_reelle, statut (prevue/confirmee/en_retard/recue_partielle/recue/annulee)`. *Retard = date_prevue dépassée & non reçue (vue).*
+**CommandeFournisseur (appro)** — `id, numero, gamme→, origine→, quantite_attendue, date_commande, date_prevue, date_reelle, statut (prevue/confirmee/en_retard/recue_partielle/recue/annulee)`. *Arrivée prévue par gamme×origine (pas de table Fournisseur). Retard = date_prevue dépassée & non reçue (vue).*
 
 **DemandeDepart**
 | Attribut | Type | Notes |
@@ -202,7 +204,7 @@ JournalAudit  (actions sensibles)
 | Fonction | Sales | Prod/Ops/Appro | Qualité | Équipe départ | Admin |
 |---|---|---|---|---|---|
 | Dashboard stock (dispo par gamme/origine) | L | L | L | L | L |
-| Référentiel (gammes, origines, clients, fournisseurs) | L | M | L | L | C/M |
+| Référentiel (gammes, origines, clients) | L | M | L | L | C/M |
 | Réception lot + upload CoA fournisseur | — | C/M | L | — | C/M |
 | **Poser le statut du lot** (libérer/bloquer/refuser) | L | L | **V** | L | V |
 | CoA Circul'Egg (upload/attacher) | — | L | C/M | L | M |
