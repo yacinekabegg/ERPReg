@@ -38,7 +38,8 @@
 - ✅ **RLS des 5 rôles livrée** (`0002_rls.sql`) + **seed** gammes/origines/zones/transporteur (`seed.sql`). *Validé sur un vrai Postgres.*
 - ⬜ Créer le **projet Supabase** distant + appliquer les migrations (`supabase db push`) + bucket **Storage** `coa`.
 - ⬜ Créer les **utilisateurs** (Supabase Auth) et affecter leurs rôles.
-- ⬜ Squelette **Next.js PWA** + déploiement **Vercel** (login Supabase).
+- ✅ **Squelette Next.js PWA livré** : auth Supabase (login + middleware), shell protégé, **navigation filtrée par rôle**, 1 page par module, manifest + service worker. *Typecheck + build Next.js OK ; routes vérifiées en mode démo.*
+- ⬜ Déploiement **Vercel** + branchement des variables Supabase (`.env`).
 - **Jalon J1** : socle en ligne, login OK, référentiel en base.
 - *Décisions actées : rôles génériques (sans prénom), pas de table Fournisseur (pays suffit), clients créés dans l'outil, n° de lot `REG-{GAMME}-{ORIGINE}-{AAMMJJ}-{seq}`.*
 
