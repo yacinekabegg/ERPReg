@@ -61,13 +61,14 @@
 - ⬜ Validation end-to-end via l'app une fois Supabase branché.
 - **Jalon J3** : boucle qualité complète (réception → libération).
 
-### Sprint 3 — Départs & Commandes *(rôles Sales + Équipe départ)* → **MVP complet**
+### Sprint 3 — Départs & Commandes *(rôles Sales + Équipe départ)* — ✅ livré (code) → **MVP complet**
 **But :** boucle bout-en-bout, produit utilisable en prod.
-- **Sales** : créer **commande client** ; créer **demande de départ** (type échantillon/commande, client, adresse, lignes ; échantillon **pré-rempli 50 g, modifiable**, gratuit).
-- **Équipe départ** : file des demandes → **allocation de lots `libérés` uniquement** → **expédition** (transporteur, poids/colis, **n° de suivi manuel**) → **décrément stock**.
-- Contrôle bloquant expédition (lot non libéré / stock insuffisant).
-- Dashboard stock disponible (Sales).
-- **Jalon J4 : MVP LIVRÉ** — l'outil remplace la gestion artisanale.
+- ✅ **Sales** : création de **clients** (+ adresse) et de **commandes** ; création de **demande de départ** (échantillon/commande, client, adresse, lignes ; échantillon **pré-rempli 0,050 kg = 50 g, modifiable**).
+- ✅ **Équipe départ** : file des demandes → **allocation de lots `libérés` uniquement** (seuls les lots avec dispo>0 sont proposés) → **expédition** (transporteur, poids/colis, **n° de suivi manuel**) → **décrément du stock** (mouvement sortie) + audit.
+- ✅ Traçabilité **lot → client** conservée ; dashboard stock branché.
+- ✅ *Validé bout-en-bout sur Postgres réel : expédition d'un échantillon 50 g → stock 120 → 119,950 kg, demande `expediee`, lien demande→client→lot.*
+- ⬜ Validation end-to-end via l'app une fois Supabase branché.
+- **Jalon J4 : MVP LIVRÉ (code)** — boucle Réception → Libération → Départ complète.
 
 ### Sprint 4 — Appro & Dashboards *(V1.1)*
 **But :** anticiper les ruptures, confort par rôle.

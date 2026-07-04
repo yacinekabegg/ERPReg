@@ -58,6 +58,10 @@ La navigation et les permissions (RLS Postgres) s'adaptent au(x) rôle(s) de l'u
 
 ## État d'avancement
 
-- **Sprint 0 (socle)** ✅ : schéma + RLS + seed (validés sur Postgres), PWA + auth + navigation par rôle (build OK).
-- **Sprint 1** ⏭️ : Réception & stock (formulaire lot + upload CoA, stock temps réel).
-- Voir le plan pour la suite.
+- **Sprint 0 (socle)** ✅ : schéma + RLS + seed (validés sur Postgres), PWA + auth + navigation par rôle.
+- **Sprint 1** ✅ : Réception & stock (formulaire lot + upload CoA, stock temps réel).
+- **Sprint 2** ✅ : Qualité (file, CoA CE, Libérer/Bloquer/Refuser, audit).
+- **Sprint 3** ✅ : Départs & commandes (clients, demandes échantillon/commande, expédition + décrément stock). **→ MVP complet (boucle Réception → Libération → Départ).**
+- **Sprint 4 (V1.1)** ⏭️ : appro / arrivées prévues / retards, dashboards & alertes.
+
+Chaque brique d'écriture est validée sur Postgres réel (release gate + décrément stock). Reste la mise en ligne (Supabase + Vercel) pour l'usage terrain.
