@@ -9,7 +9,10 @@ Approche v1 : simple, **sans seuils** — le statut d'un lot est posé à la mai
 |---|---|
 | `migrations/0001_schema.sql` | Tables, types énumérés, génération du n° de lot, vue stock, triggers |
 | `migrations/0002_rls.sql` | Row Level Security : permissions des 5 rôles |
+| `migrations/0003_storage_and_users.sql` | Bucket Storage `coa` + création auto du profil à l'inscription |
 | `seed.sql` | Données de démarrage : gammes, origines (FR/ES/TR), zones de stock, transporteur |
+
+> Pour la mise en ligne complète (Supabase + Vercel), voir [`../docs/mise-en-ligne.md`](../docs/mise-en-ligne.md).
 
 ## Les 5 rôles (génériques, sans prénom)
 
@@ -44,7 +47,7 @@ supabase db push           # applique les migrations
 ```
 
 Sans CLI : exécuter dans l'ordre, via le SQL Editor du dashboard Supabase :
-`0001_schema.sql` → `0002_rls.sql` → `seed.sql`.
+`0001_schema.sql` → `0002_rls.sql` → `0003_storage_and_users.sql` → `seed.sql`.
 
 ## À faire ensuite (hors Sprint 0)
 
