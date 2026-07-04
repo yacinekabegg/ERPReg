@@ -92,10 +92,12 @@ th { color: var(--muted); font-weight: 600; }
 .auth-card { width: 100%; max-width: 380px; }
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
 .field label { font-size: 13px; font-weight: 600; color: var(--muted); }
-.field input {
+.field input, .field select {
   padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; background: #fff;
+  width: 100%;
 }
-.field input:focus { outline: 2px solid var(--accent); border-color: var(--brand); }
+.field input:focus, .field select:focus { outline: 2px solid var(--accent); border-color: var(--brand); }
+.field input[type='file'] { padding: 8px; background: #fff; }
 .error { color: var(--danger); font-size: 13px; margin-top: 4px; }
 
 .roles-line { display: flex; gap: 6px; flex-wrap: wrap; }

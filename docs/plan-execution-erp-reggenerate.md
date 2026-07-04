@@ -43,11 +43,12 @@
 - **Jalon J1** : socle en ligne, login OK, référentiel en base.
 - *Décisions actées : rôles génériques (sans prénom), pas de table Fournisseur (pays suffit), clients créés dans l'outil, n° de lot `REG-{GAMME}-{ORIGINE}-{AAMMJJ}-{seq}`.*
 
-### Sprint 1 — Stock & Réception *(rôle Prod/Ops)*
+### Sprint 1 — Stock & Réception *(rôle Prod/Ops)* — ✅ livré (code)
 **But :** on entre des lots et on voit le stock.
-- Écran **Réception** : saisie lot (n° CE auto, fournisseur, gamme, origine, qté, DLUO, emplacement) + **upload CoA fournisseur**.
-- Table **MouvementStock** (entrée) + vue **stock temps réel** par gamme×origine.
-- Vue stock détaillée par lot.
+- ✅ Écran **Réception** : formulaire lot (gamme, origine, qté, DLUO, n° lot fournisseur, emplacement) + **upload CoA fournisseur** (Storage) via server action.
+- ✅ **MouvementStock** (entrée automatique) + branchement du dashboard sur la vue **stock temps réel** (`v_stock_lot`).
+- ✅ Dashboard : agrégation **disponible par gamme×origine** + liste des lots (stock/dispo réels) + liste des dernières réceptions. *Typecheck + build OK, rendu vérifié.*
+- ⬜ Validation end-to-end de l'écriture une fois Supabase branché (bucket `coa`).
 - **Jalon J2** : réception + stock opérationnels.
 
 ### Sprint 2 — Qualité & Libération *(rôle Qualité)* — cœur de la valeur
