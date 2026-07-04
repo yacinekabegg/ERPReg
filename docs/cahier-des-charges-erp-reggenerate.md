@@ -1,84 +1,79 @@
 # Cahier des charges — ERP Reggenerate® (Circul'Egg)
 
-> **TEMPS 1 — Définition du besoin.** Document soumis à validation avant tout plan d'exécution (TEMPS 2).
-> Version 0.1 — 2026-07-04
+> **TEMPS 1 — Définition du besoin.** Document soumis à validation avant le plan d'exécution (TEMPS 2).
+> Version 0.2 — 2026-07-04 — *Décisions actées : socle **Supabase**, approche **simple sans seuils** (contrôle qualité 100 % humain).*
 
 ---
 
 ## 0. Synthèse & parti-pris
 
-**Recommandation d'architecture : un seul outil, une seule base de vérité.**
-Ne pas créer un ERP séparé. Étendre la base **Airtable existante** (source de vérité) avec un **module « Reggenerate »** (nouvelles tables liées au référentiel commun Clients/Fournisseurs) et exposer les usages terrain via la **même PWA Next.js / Vercel**.
+**Socle technique retenu : Supabase (Postgres) comme source de vérité, PWA Next.js comme interface, hébergement Vercel.**
 
-Justification :
-
-| Critère | Mono-outil (recommandé) | Deux ERP séparés |
+| Brique | Choix | Rôle |
 |---|---|---|
-| Fiabilité de la donnée | Une seule vérité, pas de synchro | Risque de désync client/stock |
-| Vitesse de déploiement | Réutilise auth, référentiel, hébergement | Tout à refaire |
-| Coût d'exploitation | 1 base à maintenir | 2 bases + passerelle |
-| Simplicité terrain | 1 login, 1 app | 2 outils = friction |
-| Traçabilité réglementaire | Chaîne complète dans un socle | Ruptures de piste d'audit |
+| Base de données | **Supabase / Postgres** | Source de vérité unique, aucun plafond d'enregistrements, gratuit à l'échelle actuelle |
+| Fichiers (CoA, BL PDF) | **Supabase Storage** | Stockage des PDF fournisseur & Circul'Egg |
+| Authentification | **Supabase Auth** | Login + gestion des utilisateurs |
+| Permissions par rôle | **Postgres RLS** (Row Level Security) | Qui voit/fait quoi, au niveau base |
+| Interface | **Next.js PWA / Vercel** | Écrans terrain (mobile-friendly) |
 
-**Découpage logique en 3 modules fonctionnels au sein d'une base unique** : (1) Stock & traçabilité lot, (2) Qualité/CoA, (3) Départs/expéditions — reliés par l'entité pivot **Lot**.
+**Un seul outil, une seule vérité.** Les 3 briques métier (Stock & traçabilité lot · Qualité/CoA · Départs/expéditions) vivent dans **une seule base**, reliées par l'entité pivot **Lot**. Découpage **logique**, pas physique.
 
-**Règle d'or du système** : *le statut qualité d'un lot gouverne sa disponibilité commerciale.* Un lot n'est **vendable/expédiable que s'il est `Libéré`**. Cette règle est non-négociable et pilotée par une seule donnée (le statut lot).
+**Principe directeur v1 : la simplicité prime. Aucun seuil n'est calculé par le système.**
+- Le système ne juge pas la conformité. Il **stocke** les CoA (PDF fournisseur + CoA Circul'Egg) et **centralise** l'information.
+- **Un humain (Qualité) lit les valeurs et pose le statut du lot à la main** : `Libéré` / `Bloqué` / `Refusé`.
+- La **seule règle automatique** — et c'est le cœur utile de l'outil — : *un lot n'est vendable/expédiable que si un humain l'a passé en `Libéré`.* Rien d'autre n'est automatisé.
 
 ---
 
 ## 1. Questions à trancher (zones d'ombre)
 
-À valider par toi avant TEMPS 2. Regroupées par thème ; mes hypothèses par défaut sont indiquées `→ défaut proposé`.
+Mes hypothèses par défaut : `→ défaut proposé`. *(Tout le bloc « seuils / specs / conformité automatique » est retiré : décision actée = contrôle 100 % humain.)*
 
 ### 1.1 Référentiel & numérotation
 1. **N° de lot Circul'Egg** : format souhaité ? `→ défaut : REG-{GAMME}-{ORIGINE}-{AAMMJJ}-{séquence}` (ex. `REG-PLUS-ES-260704-01`).
-2. Un lot Circul'Egg = **un lot fournisseur unique** ou peut-on **regrouper/scinder** plusieurs lots fournisseurs en un lot Circul'Egg ? `→ défaut : 1 lot fournisseur = 1 lot CE (pas de mélange)`.
-3. Faut-il gérer des **sous-lots / conditionnements** (sacs, big-bags, fûts) sous le lot, ou le lot est-il la maille la plus fine ? `→ défaut : maille = lot`.
-4. Les **gammes** ont-elles des specs qualité différentes (seuils CoA distincts par gamme) ? `→ hypothèse : oui, seuils par gamme`.
+2. Un lot Circul'Egg = **un lot fournisseur unique**, ou peut-on **regrouper/scinder** ? `→ défaut : 1 lot fournisseur = 1 lot CE (pas de mélange)`.
+3. Maille la plus fine = le **lot**, ou faut-il gérer des sous-conditionnements (sacs, fûts) ? `→ défaut : maille = lot`.
 
-### 1.2 Paramètres CoA (à confirmer / compléter — voir §4 pour la liste détaillée)
-5. Liste **exacte** des paramètres microbiologiques exigés et leurs **seuils** (limites d'acceptation).
-6. **Actifs** à doser : collagène, acide hyaluronique, glucosamine, chondroïtine, élastine, kératine, protéines totales ? Lesquels sont **libératoires** (bloquants) vs **informatifs** ?
-7. **Unités** par paramètre (%, UFC/g, mg/kg, ppm, µm…) et **méthodes** de référence (Kjeldahl, ICP-MS, PCR Salmonella…).
-8. **Métaux lourds / contaminants** : plomb, cadmium, mercure, arsenic — seuils ? Pesticides exigés pour **Bio / Plein Air** ?
-9. **DLUO/DDM** : durée par défaut à la fabrication ? `→ défaut : 24 mois`. Y a-t-il des lots sans DLUO ?
-10. Le **CoA Circul'Egg** reprend-il les résultats fournisseur + contre-analyse, ou uniquement la contre-analyse CE ? `→ défaut : CoA CE = contre-analyse CE, avec référence au lot & CoA fournisseur`.
+### 1.2 Qualité / CoA (version simple)
+4. Le **CoA Circul'Egg** est-il **généré par l'outil** (PDF charté à partir de valeurs saisies) ou **uploadé** (PDF produit ailleurs, juste attaché) ? `→ défaut v1 : uploadé/attaché ; génération PDF chartée en V2`.
+5. Quels **champs veux-tu au minimum voir saisis** sur un lot pour t'aider à décider à l'œil (même sans seuil) ? cf. §4 — liste de champs **informatifs**, non bloquants.
+6. Statuts lot suffisants : `En attente` / `En cours` / `Libéré` / `Bloqué` / `Refusé` ? `→ défaut : oui`.
 
 ### 1.3 Stock & emplacements
-11. **Emplacements physiques** : combien de sites / zones (quarantaine, zone libérée, zone bloquée, expédition) ? `→ défaut : 1 site, 4 zones logiques`.
-12. Un lot **non libéré** doit-il être physiquement en **zone quarantaine** (contrainte tracée) ou seulement bloqué logiquement ? `→ défaut : zone quarantaine logique + physique`.
-13. **Unité de stock** : kg ? g ? `→ défaut : kg, avec affichage g pour échantillons`.
-14. **Seuils d'alerte stock bas** : par gamme, par gamme×origine, ou global ? Valeurs ? `→ défaut : seuil par gamme×origine, paramétrable`.
+7. **Emplacements** : combien de sites/zones (quarantaine, libéré, bloqué, expédition) ? `→ défaut : 1 site, zones logiques`.
+8. **Unité de stock** : kg (affichage g pour échantillons) ? `→ défaut : kg`.
+9. **Alerte stock bas** : par gamme×origine, seuil paramétrable saisi à la main ? `→ défaut : oui`. *(C'est une alerte de confort, pas une règle bloquante.)*
 
 ### 1.4 Commandes & appro
-15. Les **commandes clients** existent-elles déjà dans l'ERP actuel (à réutiliser) ou à créer ici ? 
-16. Gère-t-on une **réservation de stock** à la prise de commande, ou l'allocation se fait-elle seulement au départ ? `→ défaut : réservation à la commande, décrément au départ`.
-17. **Arrivées prévues** : saisies manuellement, ou via commande fournisseur formelle (avec accusé) ? `→ défaut : commande fournisseur avec date prévue + suivi retard`.
+10. **Commandes clients** : déjà gérées ailleurs à réutiliser, ou à créer ici ? 
+11. **Réservation** de stock à la commande, ou allocation seulement au départ ? `→ défaut : réservation à la commande, décrément au départ`.
+12. **Arrivées prévues** : saisie manuelle avec date prévue + suivi retard ? `→ défaut : oui`.
 
 ### 1.5 Départs / expéditions
-18. **Transporteurs** utilisés : Colissimo seul, ou aussi Chronopost / DHL / transporteur palette ? Multi-transporteur dès le MVP ? `→ défaut : Colissimo au MVP, modèle extensible`.
-19. **Génération d'étiquette** : intégration API transporteur (Colissimo/Boxtal/Sendcloud) ou saisie manuelle du n° de suivi ? `→ défaut MVP : saisie manuelle du tracking, API en V2`.
-20. **Échantillons** : quantité type (50 g ?), gratuit/facturé, plafond par client, prélevés sur quel lot (dernier libéré ? lot dédié échantillon ?) ? `→ défaut : prélevé sur lot libéré, quantité libre, tracé`.
-21. Un départ peut-il **mixer plusieurs lots / gammes** dans un même colis ? `→ défaut : oui, multi-lignes`.
-22. Faut-il un **document d'accompagnement** (bon de livraison, packing list, CoA joint au colis) généré automatiquement ? `→ défaut : BL + CoA CE PDF joints`.
+13. **Transporteurs** : Colissimo seul au MVP ? `→ défaut : Colissimo, modèle extensible`.
+14. **Tracking** : saisie manuelle du n° de suivi (API transporteur en V2) ? `→ défaut : manuel`.
+15. **Échantillons** : quantité type (50 g ?), prélevés sur quel lot, gratuit/facturé ? `→ défaut : prélevé sur lot Libéré, quantité libre, tracé`.
+16. Un départ peut **mixer plusieurs lots/gammes** dans un colis ? `→ défaut : oui, multi-lignes`.
+17. **Documents joints** au colis : BL + CoA générés/attachés automatiquement ? `→ défaut : BL simple + CoA attaché`.
 
-### 1.6 Rôles, droits, conformité
-23. Nombre d'utilisateurs et cumul de rôles (une personne = plusieurs rôles) ? `→ hypothèse : oui, cumul possible`.
-24. Besoin d'une **piste d'audit** (qui a libéré/modifié quoi, quand) pour la conformité agro ? `→ défaut : oui, journal immuable sur actions qualité & stock`.
-25. Faut-il gérer les **non-conformités / rappels** (retrait d'un lot déjà expédié) dès le MVP ? `→ défaut : traçabilité descendante prête, module rappel en V2`.
+### 1.6 Rôles & conformité
+18. Cumul de rôles (une personne = plusieurs rôles) ? `→ défaut : oui`.
+19. **Piste d'audit** (qui a libéré/expédié quoi, quand) ? `→ défaut : oui, journal des actions sensibles`.
 
 ---
 
-## 2. Modèle de données
+## 2. Modèle de données (simplifié)
 
-Entité pivot : **Lot**. Le référentiel Clients/Fournisseurs est **partagé** avec l'ERP existant.
+Entité pivot : **Lot**. Référentiel Clients/Fournisseurs commun.
 
-### 2.1 Vue d'ensemble (relations)
+### 2.1 Vue d'ensemble
 
 ```
 Gamme ─┐
-Origine─┼─< Lot >─── CoA_Fournisseur
-Fournisseur┘   │  └── CoA_CircuEgg ──< ResultatAnalyse >── ParametreAnalyse
+Origine─┼─< Lot >─── coa_fournisseur_pdf   (fichier)
+Fournisseur┘   │  └── coa_circuegg_pdf      (fichier)
+               │      + statut posé À LA MAIN par Qualité
                │
                ├──< MouvementStock >── Emplacement
                │
@@ -86,181 +81,64 @@ Fournisseur┘   │  └── CoA_CircuEgg ──< ResultatAnalyse >── Par
                                           │
 Client ──< AdresseLivraison >─────────────┘
 Client ──< CommandeClient >──< LigneCommande >
-Fournisseur ──< CommandeFournisseur >──< ArrivéePrévue >
-Utilisateur ──< Role
+Fournisseur ──< CommandeFournisseur >  (arrivées prévues + retard)
+Utilisateur (Supabase Auth) ── role
+JournalAudit  (actions sensibles)
 ```
 
 ### 2.2 Tables & attributs
 
-#### Référentiel
-
-**Gamme**
-| Attribut | Type | Notes |
-|---|---|---|
-| id | PK | |
-| nom | texte | Standard / Plus / Bio / Plein Air |
-| code | texte | STD / PLUS / BIO / PA |
-| specs_qualite | lien → JeuDeSpecs | seuils CoA par gamme |
-| actif | booléen | extensible |
-
-**Origine**
-| id | PK |
-| pays | texte | France / Espagne / Turquie |
-| code | texte | FR / ES / TR |
-| actif | booléen |
-
-**Fournisseur** *(partagé ERP)*
-| id | PK |
-| raison_sociale, siret, contact, email, tel, pays | |
-| origines_fournies | lien → Origine | |
-
-**Client** *(partagé ERP)*
-| id | PK |
-| raison_sociale, siret, secteur | secteur = nutraceutique/cosmétique/petfood |
-| contact_principal, email, tel | |
-
-**AdresseLivraison**
-| id | PK |
-| client | lien → Client |
-| libellé, ligne1, ligne2, cp, ville, pays | |
-| par_défaut | booléen |
-
-#### Stock & lots
+**Gamme** — `id, nom (Standard/Plus/Bio/Plein Air), code, actif`
+**Origine** — `id, pays (France/Espagne/Turquie), code, actif`
+**Fournisseur** — `id, raison_sociale, siret, contact, email, tel, pays`
+**Client** — `id, raison_sociale, siret, secteur (nutra/cosméto/petfood), contact, email, tel`
+**AdresseLivraison** — `id, client→, libellé, ligne1, ligne2, cp, ville, pays, par_defaut`
 
 **Lot** *(pivot)*
 | Attribut | Type | Notes |
 |---|---|---|
 | id | PK | |
-| numero_lot_CE | texte unique | numérotation Circul'Egg |
+| numero_lot_CE | texte unique | |
 | numero_lot_fournisseur | texte | |
-| gamme | lien → Gamme | |
-| origine | lien → Origine | |
-| fournisseur | lien → Fournisseur | |
-| date_reception | date | |
-| dluo | date | DDM |
-| quantite_recue | nombre (kg) | |
-| quantite_stock | rollup mouvements | stock physique courant |
-| quantite_reservee | rollup lignes commande | |
-| quantite_disponible | formule | stock − réservé, **si statut = Libéré, sinon 0** |
-| statut_qualite | select | voir §3.1 |
-| emplacement | lien → Emplacement | |
-| coa_fournisseur | lien → CoA_Fournisseur | |
-| coa_circuegg | lien → CoA_CircuEgg | |
-| commentaire | texte long | |
+| gamme, origine, fournisseur | FK | |
+| date_reception, dluo | date | |
+| quantite_recue | numeric (kg) | |
+| quantite_stock | numeric | recalculé depuis MouvementStock (vue) |
+| quantite_reservee | numeric | somme des allocations en cours |
+| disponible_vente | booléen dérivé | **= (statut = Libéré)** — seule règle auto |
+| statut | enum | `en_attente / en_cours / libere / bloque / refuse` — **posé à la main** |
+| emplacement | FK | |
+| coa_fournisseur_pdf | fichier (Storage) | |
+| coa_circuegg_pdf | fichier (Storage) | uploadé en v1 |
+| coa_infos | jsonb | champs informatifs saisis (cf. §4), **non bloquants** |
+| commentaire_qualite | texte | motif blocage/refus, dérogation |
 
-**Emplacement**
-| id | PK |
-| site, zone | zone : Quarantaine / Libéré / Bloqué / Expédition |
-| type | logique/physique |
+**Emplacement** — `id, site, zone (quarantaine/libere/bloque/expedition)`
+**MouvementStock** *(journal des flux)* — `id, lot→, type (entree/sortie/ajustement/transfert), quantite (±), date, utilisateur, reference, motif`
 
-**MouvementStock** *(journal des flux, immuable)*
-| id | PK |
-| lot | lien → Lot |
-| type | select : Entrée / Sortie / Ajustement / Transfert |
-| quantite | nombre (± ) |
-| date, utilisateur | |
-| reference | lien → Expedition / Reception / Ajustement |
-| motif | texte |
+**CommandeClient** — `id, numero, client→, adresse_livraison→, date_commande, date_souhaitee, statut (brouillon/confirmee/en_preparation/expediee/cloturee/annulee)`
+**LigneCommande** — `id, commande→, gamme→, origine_souhaitee→, quantite, lot_alloue→`
 
-#### Qualité
-
-**ParametreAnalyse** *(référentiel des tests)*
-| id | PK |
-| nom | ex. Salmonella, Humidité, Protéines |
-| categorie | Micro / Physico-chimique / Actif / Contaminant / Organoleptique |
-| unite | UFC/g, %, mg/kg, µm… |
-| methode | méthode de référence |
-| libératoire | booléen | bloque la libération si hors seuil |
-
-**JeuDeSpecs** *(seuils par gamme)*
-| id | PK |
-| gamme | lien → Gamme |
-| parametre | lien → ParametreAnalyse |
-| min, max, cible | seuils d'acceptation |
-
-**CoA_Fournisseur**
-| id | PK |
-| lot | lien → Lot |
-| fichier | pièce jointe (PDF fournisseur) |
-| date_reception, reference_fournisseur | |
-| conforme | booléen (contrôle documentaire) |
-
-**CoA_CircuEgg**
-| id | PK |
-| lot | lien → Lot |
-| numero_coa | texte unique |
-| date_analyse, date_edition, laborantin | |
-| statut | Brouillon / Émis |
-| pdf_genere | pièce jointe (document charté) |
-| conclusion | Conforme / Non conforme |
-
-**ResultatAnalyse**
-| id | PK |
-| coa_circuegg | lien → CoA_CircuEgg |
-| parametre | lien → ParametreAnalyse |
-| valeur_mesuree | nombre/texte |
-| conforme | formule vs JeuDeSpecs |
-
-#### Commandes & appro
-
-**CommandeClient**
-| id | PK |
-| numero, client, adresse_livraison, date_commande, date_souhaitee | |
-| statut | Brouillon / Confirmée / En préparation / Expédiée / Clôturée / Annulée |
-
-**LigneCommande**
-| id | PK |
-| commande | lien → CommandeClient |
-| gamme, origine_souhaitee, quantite | origine facultative |
-| lot_alloué | lien → Lot (à l'allocation) |
-
-**CommandeFournisseur / Appro**
-| id | PK |
-| numero, fournisseur, gamme, origine, quantite_attendue | |
-| date_commande, date_prevue, date_reelle | |
-| statut | Prévue / Confirmée / En retard / Reçue partielle / Reçue / Annulée |
-| retard_jours | formule (aujourd'hui − date_prevue) si non reçue |
-
-#### Départs / expéditions
+**CommandeFournisseur (appro)** — `id, numero, fournisseur→, gamme→, origine→, quantite_attendue, date_commande, date_prevue, date_reelle, statut (prevue/confirmee/en_retard/recue_partielle/recue/annulee)`. *Retard = date_prevue dépassée & non reçue (vue).*
 
 **DemandeDepart**
 | Attribut | Type | Notes |
 |---|---|---|
-| id | PK | |
-| numero | texte | |
-| type | select : Échantillon / Commande | |
-| demandeur | lien → Utilisateur | (sales) |
-| client | lien → Client | |
-| adresse_livraison | lien → AdresseLivraison | |
-| commande_liee | lien → CommandeClient | si type = Commande |
-| date_demande, date_souhaitee | | |
-| statut | select | voir §3.2 |
-| priorite | select | Normale / Urgente |
-| commentaire | texte long | |
+| id, numero | | |
+| type | enum | `echantillon / commande` |
+| demandeur | FK utilisateur | (sales) |
+| client, adresse_livraison | FK | |
+| commande_liee | FK | si type = commande |
+| date_demande, date_souhaitee | date | |
+| priorite | enum | normale / urgente |
+| statut | enum | `demandee / en_preparation / expediee / livree / incident / annulee` |
+| commentaire | texte | |
 
-**LigneDepart**
-| id | PK |
-| demande | lien → DemandeDepart |
-| gamme, origine_souhaitee, quantite | |
-| lot_alloué | lien → Lot | doit être `Libéré` |
-
-**Expedition**
-| id | PK |
-| demande | lien → DemandeDepart |
-| transporteur | lien → Transporteur |
-| numero_suivi | texte |
-| date_expedition, poids, nb_colis | |
-| bl_pdf, coa_joint | pièces jointes |
-| statut | Préparée / Remise transporteur / En transit / Livrée / Incident |
-
-**Transporteur**
-| id, nom, mode (colis/palette), url_tracking | |
-
-#### Sécurité
-
-**Utilisateur** / **Role**
-| Utilisateur | id, nom, email, roles[] |
-| Role | Sales / Prod-Ops-Appro / Qualité / Départ / Admin |
+**LigneDepart** — `id, demande→, gamme→, origine_souhaitee→, quantite, lot_alloue→` *(le lot alloué doit être `libere`)*
+**Expedition** — `id, demande→, transporteur→, numero_suivi, date_expedition, poids, nb_colis, bl_pdf, coa_joint, statut (preparee/remise/en_transit/livree/incident)`
+**Transporteur** — `id, nom, mode (colis/palette), url_tracking`
+**Utilisateur** — géré par **Supabase Auth** ; table profil `id, nom, email, roles[]`
+**JournalAudit** — `id, date, utilisateur, action, entite, entite_id, avant, apres` *(libérations, mouvements, expéditions)*
 
 ---
 
@@ -269,172 +147,116 @@ Utilisateur ──< Role
 ### 3.1 Réception → Qualité → Libération (cycle de vie du LOT)
 
 ```
-[Réception]
-   Entrée lot + CoA fournisseur → statut = En attente d'analyse (zone Quarantaine)
+[Réception] (Prod/Ops)
+   Saisie lot + upload CoA fournisseur → statut = en_attente  (zone Quarantaine)
         │
         ▼
-[Qualité] contrôle CoA fournisseur + prélèvement
-   → statut = En cours d'analyse
+[Qualité] lit le CoA fournisseur, ré-analyse, attache/saisit le CoA Circul'Egg
+   → statut = en_cours
         │
-        ├─ résultats conformes aux specs de la gamme ──► édition CoA Circul'Egg
-        │                                               → statut = Libéré (zone Libéré)  ✅ vendable
-        │
-        ├─ résultat hors seuil libératoire ───────────► statut = Bloqué (zone Bloqué)   ⛔ non vendable
-        │                                               (dérogation possible → Libéré sur décision Qualité, tracée)
-        │
-        └─ non-conformité majeure ───────────────────► statut = Refusé                  ⛔ retour/destruction
+   ── DÉCISION 100 % HUMAINE (aucun seuil calculé) ──
+        ├─ OK à l'œil ─────────► statut = libere   ✅ vendable  (zone Libéré)
+        ├─ doute/attente ──────► reste en_cours / bloque
+        └─ non conforme ───────► refuse                          (retour/destruction)
 ```
-
-**Statuts lot** : `En attente d'analyse` → `En cours d'analyse` → `Libéré` | `Bloqué` | `Refusé`.
-**Invariant** : `quantite_disponible > 0` **⟺** `statut = Libéré`. Toute allocation de départ/commande vérifie ce statut.
+**Statuts lot** : `en_attente → en_cours → libere | bloque | refuse`.
+**Invariant (seule règle auto)** : `disponible_vente = (statut = libere)`. Toute allocation vérifie ce booléen.
 
 ### 3.2 Demande de départ → Expédition
 
 ```
-[Sales] crée DemandeDepart (type, client, adresse, lignes gamme/qté)
-   → statut = Demandée
-        │
-        ▼
-[Équipe départ] prend en charge, alloue les lots (Libérés uniquement)
-   → statut = En préparation   (réservation stock)
-        │
-        ▼
-   colis prêt, BL + CoA générés, remise transporteur, saisie n° suivi
-   → statut = Expédiée   → décrément stock (MouvementStock Sortie)
-        │
-        ▼
-   suivi tracking
-   → statut = Livrée   |   Incident (litige transport)
+[Sales] crée DemandeDepart (type, client, adresse, lignes gamme/qté) → demandee
+[Équipe départ] prend en charge, alloue des lots LIBÉRÉS → en_preparation (réservation)
+   colis prêt, BL + CoA joints, remise transporteur, saisie n° suivi → expediee
+        → décrément stock (MouvementStock sortie)
+   suivi tracking → livree | incident | annulee
 ```
+**Contrôle bloquant** : passage `en_preparation → expediee` impossible si un lot alloué n'est pas `libere` ou si stock disponible insuffisant.
 
-Statuts départ : `Demandée` → `En préparation` → `Expédiée` → `Livrée` | `Incident` | `Annulée`.
-**Contrôle bloquant** : impossible de passer `En préparation` → `Expédiée` si un lot alloué n'est pas `Libéré` ou si le stock disponible est insuffisant.
-
-### 3.3 Appro (anticipation rupture)
-
-```
-CommandeFournisseur : Prévue → Confirmée → (En retard si date dépassée) → Reçue → [Réception §3.1]
-```
-Le croisement **stock disponible + arrivées prévues − commandes/réservations** alimente l'alerte de rupture par gamme×origine.
+### 3.3 Appro
+`CommandeFournisseur : prevue → confirmee → (en_retard si date dépassée) → recue → [Réception §3.1]`. Croisement stock dispo + arrivées prévues − commandes = aide à anticiper la rupture (affichage, pas d'alerte bloquante).
 
 ---
 
-## 4. Paramètres CoA — proposition à valider
+## 4. Champs informatifs de qualité (aucun seuil, non bloquant)
 
-> Membrane de coquille d'œuf (Reggenerate®). Colonne **Libératoire** = bloque la libération si hors seuil. Seuils à **confirmer/renseigner** par toi (colonnes min/max laissées ouvertes).
+> On ne calcule rien. Ce sont juste des **cases à remplir** pour que l'humain qui décide ait l'info sous les yeux (stockée dans `coa_infos`). Le PDF du CoA reste la référence. Liste à ajuster selon ce que tu veux voir apparaître.
 
-| Catégorie | Paramètre | Unité | Méthode (réf.) | Libératoire | Seuil (à confirmer) |
-|---|---|---|---|---|---|
-| Micro | Flore mésophile aérobie totale | UFC/g | ISO 4833 | ✅ | max ? |
-| Micro | Entérobactéries | UFC/g | ISO 21528 | ✅ | max ? |
-| Micro | E. coli | UFC/g | ISO 16649 | ✅ | max ? |
-| Micro | Salmonella | /25 g | ISO 6579 (PCR) | ✅ | Absence |
-| Micro | Staph. aureus | UFC/g | ISO 6888 | ✅ | max ? |
-| Micro | Listeria monocytogenes | /25 g | ISO 11290 | ✅ | Absence |
-| Micro | Levures & moisissures | UFC/g | ISO 21527 | ✅ | max ? |
-| Physico-chimique | Humidité | % | gravimétrie | ✅ | max ? |
-| Physico-chimique | Protéines totales | % | Kjeldahl (N×6,25) | ✅ | min ? |
-| Physico-chimique | Cendres | % | calcination | ⬜ | — |
-| Physico-chimique | Granulométrie | µm / mesh | tamisage/laser | ⬜ | plage ? |
-| Actif | Collagène | % | hydroxyproline | ✅ | min ? |
-| Actif | Acide hyaluronique | mg/g | HPLC/ELISA | ⬜ | min ? |
-| Actif | Glucosamine | mg/g | HPLC | ⬜ | — |
-| Actif | Chondroïtine sulfate | mg/g | HPLC | ⬜ | — |
-| Actif | Élastine / Kératine | mg/g | dosage spécifique | ⬜ | — |
-| Contaminant | Plomb (Pb) | mg/kg | ICP-MS | ✅ | max ? |
-| Contaminant | Cadmium (Cd) | mg/kg | ICP-MS | ✅ | max ? |
-| Contaminant | Mercure (Hg) | mg/kg | ICP-MS | ✅ | max ? |
-| Contaminant | Arsenic (As) | mg/kg | ICP-MS | ✅ | max ? |
-| Contaminant | Pesticides (Bio/Plein Air) | mg/kg | GC-MS/LC-MS | ✅ (Bio/PA) | selon règlement Bio |
-| Organoleptique | Aspect / Couleur / Odeur | — | visuel | ⬜ | conforme référence |
+| Catégorie | Champ (exemples) | Unité (info) |
+|---|---|---|
+| Micro | Salmonella, Listeria, E. coli, flore totale, entérobactéries, levures/moisissures | présence / UFC/g |
+| Physico-chimique | Humidité, protéines, cendres, granulométrie | %, µm |
+| Actifs | Collagène, acide hyaluronique, autres actifs membrane | %, mg/g |
+| Contaminants | Plomb, cadmium, mercure, arsenic (+ pesticides pour Bio/Plein Air) | mg/kg |
+| Organoleptique | Aspect, couleur, odeur | texte libre |
+| Décision | **Statut posé par Qualité** + commentaire | enum + texte |
+
+*(En v1, ces champs sont facultatifs : au minimum, on attache les PDF et on pose le statut. On enrichit la saisie plus tard si utile.)*
 
 ---
 
-## 5. Matrice rôles / permissions
+## 5. Matrice rôles / permissions (appliquée via RLS Supabase)
 
-Légende : **C** créer · **L** lire · **M** modifier · **V** valider/libérer · **X** exécuter · — aucun accès.
+**C** créer · **L** lire · **M** modifier · **V** poser statut/libérer · **X** exécuter · — aucun.
 
 | Fonction | Sales | Prod/Ops/Appro | Qualité | Équipe départ | Admin |
 |---|---|---|---|---|---|
 | Dashboard stock (dispo par gamme/origine) | L | L | L | L | L |
 | Référentiel (gammes, origines, clients, fournisseurs) | L | M | L | L | C/M |
-| Réception lot | — | C/M | L | — | C/M |
-| Statut/libération lot | L | L | **V** | L | V |
-| CoA fournisseur (import, contrôle) | — | L | C/M | L | M |
-| CoA Circul'Egg (édition, PDF) | — | — | **C/M** | L | M |
+| Réception lot + upload CoA fournisseur | — | C/M | L | — | C/M |
+| **Poser le statut du lot** (libérer/bloquer/refuser) | L | L | **V** | L | V |
+| CoA Circul'Egg (upload/attacher) | — | L | C/M | L | M |
 | Commandes clients | C/L | L/M | L | L | M |
-| Appro / arrivées prévues / retards | L | **C/M** | L | — | M |
+| Appro / arrivées / retards | L | **C/M** | L | — | M |
 | Créer demande de départ | **C** | C | — | L | C |
 | Exécuter/expédier départ | L | L | L | **X** | X |
 | Allocation lot → départ/commande | — | M | L | M | M |
 | Journal d'audit | — | L | L | — | L |
-| Gestion utilisateurs & droits | — | — | — | — | **C/M** |
+| Utilisateurs & droits | — | — | — | — | **C/M** |
 
-Cumul de rôles autorisé (une personne peut être Sales + Départ, etc.).
+Cumul de rôles autorisé.
 
 ---
 
 ## 6. Vues / écrans par rôle
 
-### 6.1 Sales
-- **Dashboard stock** : disponible à la vente par **gamme × origine** (badge Libéré vs bloqué), niveaux vs seuils, arrivées prévues.
-- **Nouvelle demande de départ** : formulaire (type Échantillon/Commande, client, adresse, lignes gamme/qté), envoi à l'équipe départ.
-- **Mes demandes** : suivi statut + tracking.
-- Liste **commandes clients** en cours.
-
-### 6.2 Prod / Ops / Appro
-- **Réception** : saisie lot + upload CoA fournisseur → crée le lot en Quarantaine.
-- **Tableau appro** : arrivées prévues, dates, **retards** (rouge), reste à recevoir.
-- **Stock détaillé** : par lot, emplacement, mouvements.
-- **Anticipation rupture** : stock dispo + appro − commandes par gamme×origine.
-
-### 6.3 Qualité
-- **File de validation** : lots `En attente`/`En cours`, triés par ancienneté.
-- **Fiche lot qualité** : CoA fournisseur, saisie des **résultats d'analyse** vs specs de la gamme (conforme/hors seuil auto-calculé).
-- **Édition CoA Circul'Egg** : génération du PDF charté, puis **Libérer / Bloquer / Refuser**.
-- **Journal qualité** (audit) : qui a libéré quoi, quand, dérogations.
-
-### 6.4 Équipe départ (échantillon / commande)
-- **File des demandes à exécuter** : filtrable Échantillon/Commande, priorité.
-- **Préparation** : allocation des lots (seuls les `Libérés` proposés), contrôle quantité.
-- **Expédition** : choix transporteur, poids/colis, génération BL + CoA, saisie n° suivi → décrément stock.
-- **Suivi** : colis expédiés, tracking, incidents.
-
-### 6.5 Admin
-- Gestion utilisateurs/rôles, référentiels, paramètres (seuils, specs, transporteurs), journal d'audit global.
+- **Sales** — Dashboard stock **disponible** (par gamme×origine, badge Libéré) ; **Nouvelle demande de départ** (échantillon/commande) ; Mes demandes + tracking ; Commandes en cours.
+- **Prod/Ops/Appro** — Réception (saisie lot + upload CoA) ; Tableau appro (arrivées, **retards**) ; Stock détaillé par lot/emplacement/mouvements ; aide anticipation rupture.
+- **Qualité** — **File des lots à traiter** (`en_attente`/`en_cours`) ; Fiche lot (CoA fournisseur, upload CoA CE, champs infos facultatifs) ; boutons **Libérer / Bloquer / Refuser** + commentaire ; journal qualité.
+- **Équipe départ** — **File des demandes à exécuter** (filtre échantillon/commande, priorité) ; Préparation (allocation lots **Libérés** uniquement) ; Expédition (transporteur, poids/colis, n° suivi) → décrément stock ; suivi.
+- **Admin** — Utilisateurs/rôles, référentiels, transporteurs, seuils d'alerte stock, journal global.
 
 ---
 
-## 7. Règles de gestion clés (récap)
+## 7. Règles de gestion clés (v1)
 
-1. **Disponibilité = statut Libéré.** Un lot non libéré n'apparaît jamais comme vendable/expédiable.
-2. **Décrément stock au départ** (passage `Expédiée`), pas à la demande. Réservation possible à l'allocation.
-3. **Traçabilité descendante & ascendante** : de « quel lot chez quel client » jusqu'à « quel fournisseur/origine pour ce lot » (base d'un futur rappel).
-4. **Journal immuable** sur libérations, mouvements de stock, expéditions.
-5. **Seuils qualité par gamme** ; un paramètre libératoire hors seuil bloque la libération (dérogation Qualité tracée).
-6. **Alertes** : stock bas (seuil gamme×origine), appro en retard, lots en attente d'analyse trop anciens, DLUO approchant.
+1. **Disponibilité = statut Libéré**, posé à la main. Un lot non libéré n'est jamais vendable/expédiable.
+2. **Aucun seuil calculé** : la conformité est jugée par un humain.
+3. **Décrément stock au départ** (`expediee`), réservation possible à l'allocation.
+4. **Traçabilité montante & descendante** : quel lot chez quel client ↔ quel fournisseur/origine (socle d'un futur rappel).
+5. **Journal d'audit** sur libérations, mouvements, expéditions.
+6. **Alertes de confort** (non bloquantes) : stock bas (seuil saisi), appro en retard, lots en attente trop anciens, DLUO approchant.
 
 ---
 
-## 8. Ce qui reste hors périmètre MVP (proposé pour V2)
+## 8. Hors périmètre MVP (proposé pour V2)
 
-- Intégration API transporteur (étiquettes automatiques).
-- Module rappel/retrait de lot formalisé.
-- Facturation / comptabilité.
-- Portail client (suivi commande côté client).
-- Analytics avancés (rendement matière, taux de libération, délais).
+- Génération automatique du **CoA Circul'Egg charté** (PDF) et du **BL**.
+- Intégration **API transporteur** (étiquettes Colissimo/Boxtal/Sendcloud).
+- Saisie structurée des valeurs + éventuels **contrôles seuils** (si un jour souhaité).
+- Module **rappel/retrait** de lot.
+- Facturation, portail client, analytics avancés.
 
 ---
 
 ## 9. Validation
 
-**Merci de valider / corriger :**
-- [ ] Architecture mono-outil (extension Airtable + PWA) — OK ?
+- [ ] Socle **Supabase + PWA Next.js** — validé
+- [ ] Approche **sans seuils / statut manuel** — validé
 - [ ] Réponses aux questions §1
-- [ ] Liste & seuils des paramètres CoA §4
 - [ ] Modèle de données §2
 - [ ] Workflows & statuts §3
-- [ ] Matrice rôles §5
+- [ ] Champs informatifs §4 (ceux que tu veux réellement voir)
 - [ ] Périmètre MVP vs V2 §8
 
-**Dès validation → TEMPS 2 : plan d'exécution** (sprints, MVP/V2, roadmap, jalons, dépendances, RACI).
+**Dès validation → TEMPS 2 : plan d'exécution** (sprints, MVP/V2, roadmap, jalons, dépendances, qui fait quoi).
