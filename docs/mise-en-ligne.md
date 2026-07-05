@@ -24,14 +24,19 @@ Dans le projet : **Project Settings** (roue crantée) → **API**. Noter :
 
 ## Étape 3 — Créer la base (schéma + sécurité + données)
 
-Ouvrir **SQL Editor** (menu de gauche) → *New query*. Copier-coller puis **Run**, **dans cet ordre**, le contenu de :
+Ouvrir **SQL Editor** (menu de gauche) → *New query*.
 
-1. `supabase/migrations/0001_schema.sql`  → les tables
-2. `supabase/migrations/0002_rls.sql`     → les permissions par rôle
-3. `supabase/migrations/0003_storage_and_users.sql` → le stockage des CoA + auto-profil
-4. `supabase/seed.sql`                    → gammes, origines, zones, Colissimo
+**Le plus simple — un seul fichier :** ouvrir **`supabase/setup.sql`**, sélectionner **tout son
+contenu** (Ctrl/Cmd+A), le **copier**, le **coller** dans l'éditeur, puis **Run**.
 
-> Chaque exécution doit afficher *Success*. (Des *NOTICE … skipping* sont normaux.)
+> ⚠️ Il faut coller le **contenu du fichier** (le vrai code SQL qui commence par
+> `create extension …`), **pas** le nom du fichier. Une seule exécution suffit.
+
+Résultat attendu : *Success. No rows returned* (des *NOTICE … skipping* sont normaux).
+Dans **Storage**, le bucket **`coa`** doit apparaître.
+
+*(Variante avancée : exécuter séparément `migrations/0001_schema.sql`, puis `0002_rls.sql`,
+puis `0003_storage_and_users.sql`, puis `seed.sql` — même résultat.)*
 
 À la fin, dans **Storage**, le bucket **`coa`** doit exister (privé).
 
