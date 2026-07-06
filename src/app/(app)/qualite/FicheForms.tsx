@@ -1,7 +1,7 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
-import { decideLot, uploadCoaCE, saveInfos, type FormState } from './actions';
+import { decideLot, uploadCoaCE, type FormState } from './actions';
 
 const init: FormState = { ok: false, message: '' };
 
@@ -19,8 +19,6 @@ function Submit({ children, className = 'btn' }: { children: React.ReactNode; cl
   );
 }
 
-type Infos = Record<string, string> | null;
-
 export function CoaCEForm({ lotId, hasCoa }: { lotId: string; hasCoa: boolean }) {
   const [state, action] = useFormState(uploadCoaCE, init);
   return (
@@ -32,46 +30,6 @@ export function CoaCEForm({ lotId, hasCoa }: { lotId: string; hasCoa: boolean })
       </div>
       <div className="btn-row">
         <Submit className="btn ghost">Enregistrer le CoA</Submit>
-        <Status state={state} />
-      </div>
-    </form>
-  );
-}
-
-export function InfosForm({ lotId, infos }: { lotId: string; infos: Infos }) {
-  const [state, action] = useFormState(saveInfos, init);
-  const v = (k: string) => infos?.[k] ?? '';
-  return (
-    <form action={action}>
-      <input type="hidden" name="lot_id" value={lotId} />
-      <div className="grid cols-3">
-        <div className="field">
-          <label htmlFor="humidite">Humidité</label>
-          <input id="humidite" name="humidite" defaultValue={v('humidite')} placeholder="ex. 8 %" />
-        </div>
-        <div className="field">
-          <label htmlFor="proteines">Protéines</label>
-          <input id="proteines" name="proteines" defaultValue={v('proteines')} placeholder="ex. 90 %" />
-        </div>
-        <div className="field">
-          <label htmlFor="salmonella">Salmonella</label>
-          <input id="salmonella" name="salmonella" defaultValue={v('salmonella')} placeholder="ex. absence /25g" />
-        </div>
-        <div className="field">
-          <label htmlFor="listeria">Listeria</label>
-          <input id="listeria" name="listeria" defaultValue={v('listeria')} placeholder="ex. absence /25g" />
-        </div>
-        <div className="field">
-          <label htmlFor="aspect">Aspect / couleur</label>
-          <input id="aspect" name="aspect" defaultValue={v('aspect')} />
-        </div>
-        <div className="field">
-          <label htmlFor="autres">Autres</label>
-          <input id="autres" name="autres" defaultValue={v('autres')} />
-        </div>
-      </div>
-      <div className="btn-row">
-        <Submit className="btn ghost">Enregistrer les infos</Submit>
         <Status state={state} />
       </div>
     </form>

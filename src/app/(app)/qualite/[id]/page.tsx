@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import PageHead from '@/components/PageHead';
 import { AccessDenied } from '@/components/Placeholder';
-import { CoaCEForm, InfosForm, DecisionForm } from '../FicheForms';
+import { CoaCEForm, DecisionForm } from '../FicheForms';
+import CoaForm from '../CoaForm';
+import { defaultCoaData } from '@/lib/coa-template';
 import { getAppUser, hasAnyRole } from '@/lib/appUser';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { notFound, redirect } from 'next/navigation';
@@ -34,7 +36,7 @@ type Lot = {
   statut: string;
   coa_fournisseur_path: string | null;
   coa_circuegg_path: string | null;
-  coa_infos: Record<string, string> | null;
+  coa_infos: Record<string, unknown> | null;
   commentaire_qualite: string | null;
   gammes: { nom: string } | null;
   origines: { pays: string } | null;
@@ -139,19 +141,20 @@ export default async function FicheLotPage({ params }: { params: { id: string } 
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
-        <h3 style={{ marginTop: 0 }}>CoA Circul&apos;Egg</h3>
+        <h3 style={{ marginTop: 0 }}>CoA Circul&apos;Egg — génération</h3>
         <p style={{ color: 'var(--muted)', marginTop: 0 }}>
-          Contre-analyse Circul&apos;Egg : attachez le PDF (généré ailleurs en v1).
+          Saisissez les résultats et cochez « conforme » sur chaque paramètre. Le PDF charté est
+          généré une fois tous les paramètres validés, puis rattaché au lot.
         </p>
-        <CoaCEForm lotId={lot.id} hasCoa={!!lot.coa_circuegg_path} />
+        <CoaForm lotId={lot.id} data={defaultCoaData(lot)} coaUrl={coaCEUrl} />
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
-        <h3 style={{ marginTop: 0 }}>Champs informatifs (facultatifs)</h3>
+        <h3 style={{ marginTop: 0 }}>Joindre un CoA externe (repli)</h3>
         <p style={{ color: 'var(--muted)', marginTop: 0 }}>
-          Aucun seuil n&apos;est calculé : ces champs aident seulement à la lecture.
+          Si besoin, vous pouvez aussi attacher un PDF produit ailleurs (remplace le CoA généré).
         </p>
-        <InfosForm lotId={lot.id} infos={lot.coa_infos} />
+        <CoaCEForm lotId={lot.id} hasCoa={!!lot.coa_circuegg_path} />
       </div>
 
       <div className="card">

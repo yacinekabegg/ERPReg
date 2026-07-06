@@ -79,7 +79,8 @@
 - **Jalon J5 : V1.1 (code)**.
 
 ### Au-delà — V2 (backlog priorisable)
-Génération **PDF CoA charté** & BL · **API transporteur**/étiquettes · module **rappel/retrait** · analytics · portail client.
+- ✅ **Génération PDF CoA charté** livrée : sur la fiche qualité, saisie des paramètres (mesurés + portés pré-remplis) + case « conforme » par paramètre → bouton **Générer le CoA** (actif quand tout est conforme) → PDF bilingue FR/EN (en-tête Circul'Egg, déclaration signée, 3 sections) stocké dans Storage et rattaché au lot. `@react-pdf/renderer`, aucune migration (réutilise `coa_infos` + `coa_circuegg_path`). Rendu validé (PDF valide + mise en page conforme au gabarit Excel).
+- Reste V2 : **CoA contaminants**, génération **BL** auto · **API transporteur**/étiquettes · module **rappel/retrait** · analytics · portail client.
 
 ---
 
