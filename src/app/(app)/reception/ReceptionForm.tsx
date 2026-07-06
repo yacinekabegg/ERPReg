@@ -19,11 +19,13 @@ function SubmitButton() {
 export default function ReceptionForm({
   gammes,
   origines,
+  fournisseurs,
   emplacements,
   disabled,
 }: {
   gammes: Option[];
   origines: Option[];
+  fournisseurs: Option[];
   emplacements: Option[];
   disabled?: boolean;
 }) {
@@ -32,6 +34,29 @@ export default function ReceptionForm({
   return (
     <form action={formAction}>
       <div className="grid cols-3">
+        <div className="field">
+          <label htmlFor="numero_lot_fournisseur">N° de lot fournisseur *</label>
+          <input
+            id="numero_lot_fournisseur"
+            name="numero_lot_fournisseur"
+            type="text"
+            placeholder="ex. EGGM3002504"
+            required
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="fournisseur_id">Fournisseur</label>
+          <select id="fournisseur_id" name="fournisseur_id" defaultValue="">
+            <option value="">—</option>
+            {fournisseurs.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="field">
           <label htmlFor="gamme_id">Gamme *</label>
           <select id="gamme_id" name="gamme_id" required defaultValue="">
@@ -44,6 +69,11 @@ export default function ReceptionForm({
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="granulometrie">Granulométrie</label>
+          <input id="granulometrie" name="granulometrie" type="text" placeholder="ex. 200-220µm" />
         </div>
 
         <div className="field">
@@ -73,8 +103,13 @@ export default function ReceptionForm({
         </div>
 
         <div className="field">
-          <label htmlFor="numero_lot_fournisseur">N° lot fournisseur</label>
-          <input id="numero_lot_fournisseur" name="numero_lot_fournisseur" type="text" />
+          <label htmlFor="format">Format</label>
+          <select id="format" name="format" defaultValue="sac">
+            <option value="sac">Sac</option>
+            <option value="echantillon">Échantillon</option>
+            <option value="echantillotheque">Échantillothèque</option>
+            <option value="nc">NC (non conforme)</option>
+          </select>
         </div>
 
         <div className="field">

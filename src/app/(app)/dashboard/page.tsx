@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 type LotRow = {
   id: string;
   numero_lot_ce: string | null;
+  numero_lot_fournisseur: string | null;
   statut: string;
   quantite_recue: number;
   gammes: { nom: string } | null;
@@ -41,7 +42,7 @@ async function fetchData(): Promise<{ lots: LotRow[]; stock: Map<string, StockRo
     const [lotsRes, stockRes] = await Promise.all([
       supabase
         .from('lots')
-        .select('id, numero_lot_ce, statut, quantite_recue, gammes(nom), origines(pays)')
+        .select('id, numero_lot_ce, numero_lot_fournisseur, statut, quantite_recue, gammes(nom), origines(pays)')
         .order('created_at', { ascending: false })
         .limit(100),
       supabase.from('v_stock_lot').select('lot_id, quantite_stock, quantite_disponible, disponible_vente'),
@@ -151,8 +152,8 @@ export default async function DashboardPage() {
               {lots.map((l, i) => {
                 const s = stock.get(l.id);
                 return (
-                  <tr key={l.numero_lot_ce ?? i}>
-                    <td>{l.numero_lot_ce}</td>
+                  <tr key={l.id ?? i}>
+                    <td>{l.numero_lot_fournisseur ?? l.numero_lot_ce}</td>
                     <td>{l.gammes?.nom}</td>
                     <td>{l.origines?.pays}</td>
                     <td>{s ? s.quantite_stock : l.quantite_recue}</td>

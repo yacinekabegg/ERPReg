@@ -27,13 +27,19 @@ export async function createLot(
 
   const gamme_id = String(formData.get('gamme_id') || '');
   const origine_id = String(formData.get('origine_id') || '');
+  const fournisseur_id = String(formData.get('fournisseur_id') || '') || null;
+  const granulometrie = String(formData.get('granulometrie') || '') || null;
   const quantite = Number(formData.get('quantite_recue'));
   const dluo = String(formData.get('dluo') || '') || null;
-  const numero_lot_fournisseur = String(formData.get('numero_lot_fournisseur') || '') || null;
+  const numero_lot_fournisseur = String(formData.get('numero_lot_fournisseur') || '').trim();
   const emplacement_id = String(formData.get('emplacement_id') || '') || null;
+  const format = String(formData.get('format') || 'sac');
 
   if (!gamme_id || !origine_id) {
     return { ok: false, message: 'Gamme et origine sont obligatoires.' };
+  }
+  if (!numero_lot_fournisseur) {
+    return { ok: false, message: 'Le n° de lot fournisseur est obligatoire (identifiant du lot).' };
   }
   if (!Number.isFinite(quantite) || quantite <= 0) {
     return { ok: false, message: 'La quantité reçue doit être un nombre positif (kg).' };
@@ -47,13 +53,15 @@ export async function createLot(
     .insert({
       gamme_id,
       origine_id,
+      fournisseur_id,
+      granulometrie,
       quantite_recue: quantite,
       dluo,
       numero_lot_fournisseur,
       emplacement_id,
       created_by: user.id,
     })
-    .select('id, numero_lot_ce')
+    .select('id, numero_lot_ce, numero_lot_fournisseur')
     .single();
 
   if (lotErr || !lot) {
@@ -64,6 +72,7 @@ export async function createLot(
   const { error: mvtErr } = await supabase.from('mouvements_stock').insert({
     lot_id: lot.id,
     type: 'entree',
+    format,
     quantite,
     utilisateur: user.id,
     reference: 'reception',
@@ -87,5 +96,8 @@ export async function createLot(
 
   revalidatePath('/reception');
   revalidatePath('/dashboard');
-  return { ok: true, message: `Lot ${lot.numero_lot_ce} enregistré en stock (en attente qualité).` };
+  return {
+    ok: true,
+    message: `Lot ${lot.numero_lot_fournisseur} enregistré en stock (en attente qualité).`,
+  };
 }

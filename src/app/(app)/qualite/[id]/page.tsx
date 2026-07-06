@@ -27,6 +27,7 @@ type Lot = {
   id: string;
   numero_lot_ce: string | null;
   numero_lot_fournisseur: string | null;
+  granulometrie: string | null;
   date_reception: string;
   dluo: string | null;
   quantite_recue: number;
@@ -37,6 +38,7 @@ type Lot = {
   commentaire_qualite: string | null;
   gammes: { nom: string } | null;
   origines: { pays: string } | null;
+  fournisseurs: { nom: string } | null;
 };
 
 export default async function FicheLotPage({ params }: { params: { id: string } }) {
@@ -67,7 +69,7 @@ export default async function FicheLotPage({ params }: { params: { id: string } 
   const { data } = await supabase
     .from('lots')
     .select(
-      'id, numero_lot_ce, numero_lot_fournisseur, date_reception, dluo, quantite_recue, statut, coa_fournisseur_path, coa_circuegg_path, coa_infos, commentaire_qualite, gammes(nom), origines(pays)',
+      'id, numero_lot_ce, numero_lot_fournisseur, granulometrie, date_reception, dluo, quantite_recue, statut, coa_fournisseur_path, coa_circuegg_path, coa_infos, commentaire_qualite, gammes(nom), origines(pays), fournisseurs(nom)',
     )
     .eq('id', params.id)
     .maybeSingle();
@@ -92,7 +94,7 @@ export default async function FicheLotPage({ params }: { params: { id: string } 
   return (
     <>
       <PageHead
-        title={`Lot ${lot.numero_lot_ce ?? ''}`}
+        title={`Lot ${lot.numero_lot_fournisseur ?? lot.numero_lot_ce ?? ''}`}
         subtitle="Validation qualité — décision manuelle, sans seuil."
       />
       <p style={{ marginTop: -12, marginBottom: 16 }}>
@@ -109,12 +111,16 @@ export default async function FicheLotPage({ params }: { params: { id: string } 
         <dl className="dl" style={{ marginTop: 14 }}>
           <dt>Gamme</dt>
           <dd>{lot.gammes?.nom}</dd>
+          <dt>Granulométrie</dt>
+          <dd>{lot.granulometrie ?? '—'}</dd>
           <dt>Origine</dt>
           <dd>{lot.origines?.pays}</dd>
+          <dt>Fournisseur</dt>
+          <dd>{lot.fournisseurs?.nom ?? '—'}</dd>
           <dt>Quantité reçue</dt>
           <dd>{lot.quantite_recue} kg</dd>
-          <dt>N° lot fournisseur</dt>
-          <dd>{lot.numero_lot_fournisseur ?? '—'}</dd>
+          <dt>N° interne (CE)</dt>
+          <dd>{lot.numero_lot_ce ?? '—'}</dd>
           <dt>Réception</dt>
           <dd>{lot.date_reception}</dd>
           <dt>DLUO</dt>

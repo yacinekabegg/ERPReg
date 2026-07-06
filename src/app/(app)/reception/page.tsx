@@ -2,6 +2,7 @@ import PageHead from '@/components/PageHead';
 import { AccessDenied } from '@/components/Placeholder';
 import ReceptionForm from './ReceptionForm';
 import { getAppUser, hasAnyRole } from '@/lib/appUser';
+import { getFournisseurs } from '@/lib/refs';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -92,7 +93,10 @@ export default async function ReceptionPage() {
     );
   }
 
-  const { gammes, origines, emplacements, lots } = await loadRefs();
+  const [{ gammes, origines, emplacements, lots }, fournisseurs] = await Promise.all([
+    loadRefs(),
+    getFournisseurs(),
+  ]);
 
   return (
     <>
@@ -106,6 +110,7 @@ export default async function ReceptionPage() {
         <ReceptionForm
           gammes={gammes}
           origines={origines}
+          fournisseurs={fournisseurs}
           emplacements={emplacements}
           disabled={!supabaseConfigured()}
         />
@@ -126,7 +131,6 @@ export default async function ReceptionPage() {
                 <th>Gamme</th>
                 <th>Origine</th>
                 <th>Qté (kg)</th>
-                <th>N° fournisseur</th>
                 <th>CoA</th>
                 <th>Statut</th>
               </tr>
@@ -134,12 +138,11 @@ export default async function ReceptionPage() {
             <tbody>
               {lots.map((l, i) => (
                 <tr key={l.numero_lot_ce ?? i}>
-                  <td>{l.numero_lot_ce}</td>
+                  <td>{l.numero_lot_fournisseur ?? l.numero_lot_ce}</td>
                   <td>{l.date_reception}</td>
                   <td>{l.gammes?.nom}</td>
                   <td>{l.origines?.pays}</td>
                   <td>{l.quantite_recue}</td>
-                  <td>{l.numero_lot_fournisseur ?? '—'}</td>
                   <td>{l.coa_fournisseur_path ? '📎' : '—'}</td>
                   <td>
                     <span className="badge muted">{STATUT_LABEL[l.statut] ?? l.statut}</span>

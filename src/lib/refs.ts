@@ -23,6 +23,17 @@ export async function getTransporteurs(): Promise<Ref[]> {
   return (data ?? []).map((x) => ({ id: x.id as string, label: x.nom as string }));
 }
 
+export async function getFournisseurs(): Promise<Ref[]> {
+  if (!supabaseConfigured())
+    return [
+      { id: 'demo-egglin', label: 'Egglin' },
+      { id: 'demo-eggnovo', label: 'Eggnovo' },
+      { id: 'demo-lessonia', label: 'Lessonia' },
+    ];
+  const { data } = await createClient().from('fournisseurs').select('id, nom').eq('actif', true).order('nom');
+  return (data ?? []).map((x) => ({ id: x.id as string, label: x.nom as string }));
+}
+
 export async function getClientsWithAdresses(): Promise<ClientWithAdresses[]> {
   if (!supabaseConfigured()) return [];
   const { data } = await createClient()
@@ -44,7 +55,7 @@ export async function getEligibleLots(): Promise<EligibleLot[]> {
   if (!supabaseConfigured()) return [];
   const supabase = createClient();
   const [lotsRes, stockRes] = await Promise.all([
-    supabase.from('lots').select('id, numero_lot_ce, gamme_id').eq('statut', 'libere'),
+    supabase.from('lots').select('id, numero_lot_ce, numero_lot_fournisseur, gamme_id').eq('statut', 'libere'),
     supabase.from('v_stock_lot').select('lot_id, quantite_disponible, disponible_vente'),
   ]);
   const dispo = new Map<string, number>();
@@ -54,7 +65,7 @@ export async function getEligibleLots(): Promise<EligibleLot[]> {
   return ((lotsRes.data as any[]) ?? [])
     .map((l) => ({
       id: l.id as string,
-      numero: (l.numero_lot_ce as string) ?? '',
+      numero: (l.numero_lot_fournisseur as string) ?? (l.numero_lot_ce as string) ?? '',
       gamme_id: l.gamme_id as string,
       dispo: dispo.get(l.id as string) ?? 0,
     }))

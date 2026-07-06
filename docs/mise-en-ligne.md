@@ -35,8 +35,15 @@ contenu** (Ctrl/Cmd+A), le **copier**, le **coller** dans l'éditeur, puis **Run
 Résultat attendu : *Success. No rows returned* (des *NOTICE … skipping* sont normaux).
 Dans **Storage**, le bucket **`coa`** doit apparaître.
 
-*(Variante avancée : exécuter séparément `migrations/0001_schema.sql`, puis `0002_rls.sql`,
-puis `0003_storage_and_users.sql`, puis `seed.sql` — même résultat.)*
+*(Variante avancée : exécuter séparément `migrations/0001…0004` puis `seed.sql` — même résultat.)*
+
+### Étape 3 bis (optionnelle) — Importer ton stock actuel
+Pour démarrer avec tes **vrais lots** (issus de ton onglet STOCK Excel) plutôt qu'une base vide :
+ouvre **`supabase/import_historique.sql`**, copie tout son contenu, colle-le dans une **nouvelle
+requête** du SQL Editor, puis **Run**. Ça crée **35 lots** avec fournisseur, granulométrie, statut
+qualité (OUI→libéré / NON→bloqué / NA→en attente) et le **stock ventilé par format**.
+> Le **mapping de gamme** (Standard/Plus/…) est déduit de la granulométrie et reste **à vérifier**.
+> Les **clients** ne sont pas importés (à créer dans l'app). À lancer **après** le `setup.sql`.
 
 À la fin, dans **Storage**, le bucket **`coa`** doit exister (privé).
 

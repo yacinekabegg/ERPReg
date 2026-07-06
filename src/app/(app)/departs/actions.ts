@@ -83,10 +83,11 @@ export async function expedierDemande(_prev: FormState, formData: FormData): Pro
 
   const { data: dem } = await supabase
     .from('demandes_depart')
-    .select('id, numero, statut')
+    .select('id, numero, statut, type')
     .eq('id', demande_id)
     .single();
   if (!dem) return { ok: false, message: 'Demande introuvable.' };
+  const formatSortie = dem.type === 'echantillon' ? 'echantillon' : 'sac';
   if (dem.statut === 'expediee' || dem.statut === 'livree') {
     return { ok: false, message: 'Cette demande est déjà expédiée.' };
   }
@@ -129,6 +130,7 @@ export async function expedierDemande(_prev: FormState, formData: FormData): Pro
     await supabase.from('mouvements_stock').insert({
       lot_id: a.lot_id,
       type: 'sortie',
+      format: formatSortie,
       quantite: -Math.abs(a.quantite),
       utilisateur: userId,
       reference: exp.id,

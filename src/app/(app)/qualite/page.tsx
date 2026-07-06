@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 type LotRow = {
   id: string;
   numero_lot_ce: string | null;
+  numero_lot_fournisseur: string | null;
   date_reception: string;
   quantite_recue: number;
   statut: string;
@@ -28,7 +29,7 @@ async function fetchFile(): Promise<LotRow[]> {
   const { data } = await supabase
     .from('lots')
     .select(
-      'id, numero_lot_ce, date_reception, quantite_recue, statut, coa_fournisseur_path, coa_circuegg_path, gammes(nom), origines(pays)',
+      'id, numero_lot_ce, numero_lot_fournisseur, date_reception, quantite_recue, statut, coa_fournisseur_path, coa_circuegg_path, gammes(nom), origines(pays)',
     )
     .in('statut', ['en_attente', 'en_cours'])
     .order('date_reception', { ascending: true });
@@ -89,7 +90,7 @@ export default async function QualitePage() {
             <tbody>
               {lots.map((l) => (
                 <tr key={l.id}>
-                  <td>{l.numero_lot_ce}</td>
+                  <td>{l.numero_lot_fournisseur ?? l.numero_lot_ce}</td>
                   <td>{l.date_reception}</td>
                   <td>{l.gammes?.nom}</td>
                   <td>{l.origines?.pays}</td>
