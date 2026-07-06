@@ -34,6 +34,7 @@ export async function createLot(
   const numero_lot_fournisseur = String(formData.get('numero_lot_fournisseur') || '').trim();
   const emplacement_id = String(formData.get('emplacement_id') || '') || null;
   const format = String(formData.get('format') || 'sac');
+  const commande_fournisseur_id = String(formData.get('commande_fournisseur_id') || '') || null;
 
   if (!gamme_id || !origine_id) {
     return { ok: false, message: 'Gamme et origine sont obligatoires.' };
@@ -59,6 +60,7 @@ export async function createLot(
       dluo,
       numero_lot_fournisseur,
       emplacement_id,
+      commande_fournisseur_id,
       created_by: user.id,
     })
     .select('id, numero_lot_ce, numero_lot_fournisseur')
@@ -94,8 +96,25 @@ export async function createLot(
     }
   }
 
+  // 4) Réception partielle : si la commande fournisseur rattachée est
+  //    entièrement reçue, elle passe automatiquement en "Réceptionnée".
+  if (commande_fournisseur_id) {
+    const { data: stat } = await supabase
+      .from('v_appro')
+      .select('reste_a_recevoir')
+      .eq('id', commande_fournisseur_id)
+      .maybeSingle();
+    if (stat && Number(stat.reste_a_recevoir) <= 0) {
+      await supabase
+        .from('commandes_fournisseur')
+        .update({ etat: 'recue', date_reelle: new Date().toISOString().slice(0, 10) })
+        .eq('id', commande_fournisseur_id);
+    }
+  }
+
   revalidatePath('/reception');
   revalidatePath('/dashboard');
+  revalidatePath('/appro');
   return {
     ok: true,
     message: `Lot ${lot.numero_lot_fournisseur} enregistré en stock (en attente qualité).`,

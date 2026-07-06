@@ -35,29 +35,57 @@ const STATUT_LABEL: Record<string, string> = {
   refuse: 'Refusé',
 };
 
-async function fetchData(): Promise<{ lots: LotRow[]; stock: Map<string, StockRow> }> {
-  if (!supabaseConfigured()) return { lots: [], stock: new Map() };
+type ApproRow = {
+  id: string;
+  numero: string | null;
+  numero_bdc: string | null;
+  etat: string;
+  date_prevue: string | null;
+  gammes: { nom: string } | null;
+};
+type ApproStat = { id: string; reste_a_recevoir: number; en_retard: boolean; jours_retard: number };
+type AlertLot = { numero: string; date: string };
+
+async function fetchData(): Promise<{
+  lots: (LotRow & { dluo: string | null; date_reception: string })[];
+  stock: Map<string, StockRow>;
+  appro: { row: ApproRow; stat: ApproStat | undefined }[];
+}> {
+  if (!supabaseConfigured()) return { lots: [], stock: new Map(), appro: [] };
   try {
     const supabase = createClient();
-    const [lotsRes, stockRes] = await Promise.all([
+    const [lotsRes, stockRes, approRes, statRes] = await Promise.all([
       supabase
         .from('lots')
-        .select('id, numero_lot_ce, numero_lot_fournisseur, statut, quantite_recue, gammes(nom), origines(pays)')
+        .select(
+          'id, numero_lot_ce, numero_lot_fournisseur, statut, quantite_recue, dluo, date_reception, gammes(nom), origines(pays)',
+        )
         .order('created_at', { ascending: false })
         .limit(100),
       supabase.from('v_stock_lot').select('lot_id, quantite_stock, quantite_disponible, disponible_vente'),
+      supabase
+        .from('commandes_fournisseur')
+        .select('id, numero, numero_bdc, etat, date_prevue, gammes(nom)')
+        .not('etat', 'in', '("recue","annulee")'),
+      supabase.from('v_appro').select('id, reste_a_recevoir, en_retard, jours_retard'),
     ]);
     const stock = new Map<string, StockRow>();
     for (const s of (stockRes.data as unknown as StockRow[]) ?? []) stock.set(s.lot_id, s);
-    return { lots: (lotsRes.data as unknown as LotRow[]) ?? [], stock };
+    const stats = new Map<string, ApproStat>();
+    for (const s of (statRes.data as unknown as ApproStat[]) ?? []) stats.set(s.id, s);
+    const appro = ((approRes.data as unknown as ApproRow[]) ?? []).map((row) => ({
+      row,
+      stat: stats.get(row.id),
+    }));
+    return { lots: (lotsRes.data as any) ?? [], stock, appro };
   } catch {
-    return { lots: [], stock: new Map() };
+    return { lots: [], stock: new Map(), appro: [] };
   }
 }
 
 export default async function DashboardPage() {
   await getAppUser();
-  const { lots, stock } = await fetchData();
+  const { lots, stock, appro } = await fetchData();
 
   const disponibles = lots.filter((l) => l.statut === 'libere');
   const enAttente = lots.filter((l) => l.statut === 'en_attente' || l.statut === 'en_cours');
@@ -78,12 +106,71 @@ export default async function DashboardPage() {
     (a, b) => a.gamme.localeCompare(b.gamme) || a.origine.localeCompare(b.origine),
   );
 
+  // Prévisionnel par gamme : dispo + en cours de livraison (reste à recevoir).
+  const enCoursParGamme = new Map<string, number>();
+  for (const { row, stat } of appro) {
+    const g = row.gammes?.nom ?? '—';
+    enCoursParGamme.set(g, (enCoursParGamme.get(g) ?? 0) + Number(stat?.reste_a_recevoir ?? 0));
+  }
+  const dispoParGamme = new Map<string, number>();
+  for (const r of aggRows) dispoParGamme.set(r.gamme, (dispoParGamme.get(r.gamme) ?? 0) + r.dispo);
+  const prevRows = [...new Set([...dispoParGamme.keys(), ...enCoursParGamme.keys()])]
+    .sort()
+    .map((g) => {
+      const dispo = dispoParGamme.get(g) ?? 0;
+      const attendu = enCoursParGamme.get(g) ?? 0;
+      return { gamme: g, dispo, attendu, previsionnel: dispo + attendu };
+    });
+
+  // Alertes non bloquantes.
+  const NOW = Date.now();
+  const JOUR = 24 * 3600 * 1000;
+  const retards = appro.filter((a) => a.stat?.en_retard);
+  const attenteAnciens = enAttente.filter(
+    (l) => l.date_reception && NOW - new Date(l.date_reception).getTime() > 14 * JOUR,
+  );
+  const dluoProche = disponibles.filter(
+    (l) => l.dluo && new Date(l.dluo).getTime() - NOW < 90 * JOUR,
+  );
+  const alertes: { type: string; badge: string; texte: string }[] = [];
+  if (retards.length)
+    alertes.push({
+      type: 'danger',
+      badge: 'Appro en retard',
+      texte: retards
+        .map((a) => `${a.row.numero_bdc ?? a.row.numero} (+${a.stat?.jours_retard} j)`)
+        .join(', '),
+    });
+  if (attenteAnciens.length)
+    alertes.push({
+      type: 'warn',
+      badge: 'Qualité en attente > 14 j',
+      texte: attenteAnciens.map((l) => l.numero_lot_fournisseur ?? l.numero_lot_ce ?? '').join(', '),
+    });
+  if (dluoProche.length)
+    alertes.push({
+      type: 'warn',
+      badge: 'DLUO < 90 j',
+      texte: dluoProche.map((l) => l.numero_lot_fournisseur ?? l.numero_lot_ce ?? '').join(', '),
+    });
+
   return (
     <>
       <PageHead
         title="Stock"
         subtitle="Disponibilité à la vente par gamme et origine. Seuls les lots libérés sont vendables."
       />
+
+      {alertes.length > 0 && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          {alertes.map((a) => (
+            <div key={a.badge} style={{ display: 'flex', gap: 10, alignItems: 'baseline', marginBottom: 6 }}>
+              <span className={`badge ${a.type}`}>{a.badge}</span>
+              <span style={{ fontSize: 14 }}>{a.texte}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="grid cols-3" style={{ marginBottom: 20 }}>
         <div className="card">
@@ -128,6 +215,32 @@ export default async function DashboardPage() {
           </table>
         )}
       </div>
+
+      {prevRows.length > 0 && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <h3 style={{ marginTop: 0 }}>Prévisionnel par gamme</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Gamme</th>
+                <th>Disponible (kg)</th>
+                <th>En cours de livraison (kg)</th>
+                <th>Prévisionnel (kg)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {prevRows.map((r) => (
+                <tr key={r.gamme}>
+                  <td>{r.gamme}</td>
+                  <td>{r.dispo}</td>
+                  <td>{r.attendu}</td>
+                  <td style={{ fontWeight: 600 }}>{r.previsionnel}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Lots</h3>

@@ -70,12 +70,13 @@
 - ⬜ Validation end-to-end via l'app une fois Supabase branché.
 - **Jalon J4 : MVP LIVRÉ (code)** — boucle Réception → Libération → Départ complète.
 
-### Sprint 4 — Appro & Dashboards *(V1.1)*
+### Sprint 4 — Appro & Dashboards *(V1.1)* — ✅ livré (code)
 **But :** anticiper les ruptures, confort par rôle.
-- **Commandes fournisseur** / arrivées prévues + calcul **retard**.
-- Vue **anti-rupture** (stock dispo + appro − commandes).
-- **Dashboards par rôle** + **alertes** (stock bas, DLUO, lots en attente trop anciens).
-- **Jalon J5 : V1.1**.
+- ✅ **Commandes fournisseur** avec le **vrai workflow Egglin 6 étapes** (Demande WhatsApp → Proforma → Paiement → Production → Expédition Turquie → Réceptionnée), n° BDC/proforma, date de paiement (migration `0005`).
+- ✅ **Réceptions partielles** : les lots reçus se rattachent à la commande ; reçu/reste calculés (vue `v_appro`), passage auto en « Réceptionnée » quand tout est reçu. *Scénario réel validé sur Postgres : 300 kg → reçu 160 → reste 140 → solde 0.*
+- ✅ Calcul **retard** (jours) + bandeau d'alerte sur la page Appro.
+- ✅ Dashboard : **prévisionnel par gamme** (dispo + en cours de livraison) + **alertes** (appro en retard, lots en attente > 14 j, DLUO < 90 j).
+- **Jalon J5 : V1.1 (code)**.
 
 ### Au-delà — V2 (backlog priorisable)
 Génération **PDF CoA charté** & BL · **API transporteur**/étiquettes · module **rappel/retrait** · analytics · portail client.

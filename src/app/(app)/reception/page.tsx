@@ -81,6 +81,26 @@ async function loadRefs(): Promise<{
   };
 }
 
+// Commandes fournisseur encore ouvertes, avec le reste à recevoir.
+async function loadCommandesOuvertes(): Promise<Ref[]> {
+  if (!supabaseConfigured()) return [];
+  const supabase = createClient();
+  const [cmdRes, statRes] = await Promise.all([
+    supabase
+      .from('commandes_fournisseur')
+      .select('id, numero, numero_bdc, quantite_attendue, etat, gammes(nom)')
+      .not('etat', 'in', '("recue","annulee")')
+      .order('date_commande', { ascending: false }),
+    supabase.from('v_appro').select('id, reste_a_recevoir'),
+  ]);
+  const reste = new Map<string, number>();
+  for (const s of (statRes.data as any[]) ?? []) reste.set(s.id as string, Number(s.reste_a_recevoir));
+  return ((cmdRes.data as any[]) ?? []).map((c) => ({
+    id: c.id as string,
+    label: `${c.numero_bdc ?? c.numero} — ${c.gammes?.nom ?? ''} — reste ${reste.get(c.id) ?? c.quantite_attendue} kg`,
+  }));
+}
+
 export default async function ReceptionPage() {
   const user = await getAppUser();
   if (!user) redirect('/login');
@@ -93,9 +113,10 @@ export default async function ReceptionPage() {
     );
   }
 
-  const [{ gammes, origines, emplacements, lots }, fournisseurs] = await Promise.all([
+  const [{ gammes, origines, emplacements, lots }, fournisseurs, commandes] = await Promise.all([
     loadRefs(),
     getFournisseurs(),
+    loadCommandesOuvertes(),
   ]);
 
   return (
@@ -112,6 +133,7 @@ export default async function ReceptionPage() {
           origines={origines}
           fournisseurs={fournisseurs}
           emplacements={emplacements}
+          commandes={commandes}
           disabled={!supabaseConfigured()}
         />
       </div>

@@ -21,12 +21,14 @@ export default function ReceptionForm({
   origines,
   fournisseurs,
   emplacements,
+  commandes,
   disabled,
 }: {
   gammes: Option[];
   origines: Option[];
   fournisseurs: Option[];
   emplacements: Option[];
+  commandes: Option[];
   disabled?: boolean;
 }) {
   const [state, formAction] = useFormState(createLot, initialState);
@@ -124,6 +126,18 @@ export default function ReceptionForm({
             {emplacements.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="commande_fournisseur_id">Commande fournisseur liée</label>
+          <select id="commande_fournisseur_id" name="commande_fournisseur_id" defaultValue="">
+            <option value="">— (aucune)</option>
+            {commandes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
               </option>
             ))}
           </select>
