@@ -1,6 +1,7 @@
 import PageHead from '@/components/PageHead';
 import { AccessDenied } from '@/components/Placeholder';
 import ReceptionForm from './ReceptionForm';
+import DeleteButton from '@/components/DeleteButton';
 import { getAppUser, hasAnyRole } from '@/lib/appUser';
 import { getFournisseurs } from '@/lib/refs';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
@@ -10,6 +11,7 @@ export const dynamic = 'force-dynamic';
 
 type Ref = { id: string; label: string };
 type LotRow = {
+  id: string;
   numero_lot_ce: string | null;
   date_reception: string;
   quantite_recue: number;
@@ -64,7 +66,7 @@ async function loadRefs(): Promise<{
     supabase
       .from('lots')
       .select(
-        'numero_lot_ce, date_reception, quantite_recue, statut, numero_lot_fournisseur, coa_fournisseur_path, gammes(nom), origines(pays)',
+        'id, numero_lot_ce, date_reception, quantite_recue, statut, numero_lot_fournisseur, coa_fournisseur_path, gammes(nom), origines(pays)',
       )
       .order('created_at', { ascending: false })
       .limit(20),
@@ -113,6 +115,8 @@ export default async function ReceptionPage() {
     );
   }
 
+  const canDelete = user.roles.includes('admin');
+
   const [{ gammes, origines, emplacements, lots }, fournisseurs, commandes] = await Promise.all([
     loadRefs(),
     getFournisseurs(),
@@ -155,11 +159,12 @@ export default async function ReceptionPage() {
                 <th>Qté (kg)</th>
                 <th>CoA</th>
                 <th>Statut</th>
+                {canDelete && <th></th>}
               </tr>
             </thead>
             <tbody>
               {lots.map((l, i) => (
-                <tr key={l.numero_lot_ce ?? i}>
+                <tr key={l.id ?? i}>
                   <td>{l.numero_lot_fournisseur ?? l.numero_lot_ce}</td>
                   <td>{l.date_reception}</td>
                   <td>{l.gammes?.nom}</td>
@@ -169,6 +174,11 @@ export default async function ReceptionPage() {
                   <td>
                     <span className="badge muted">{STATUT_LABEL[l.statut] ?? l.statut}</span>
                   </td>
+                  {canDelete && (
+                    <td>
+                      <DeleteButton type="lot" id={l.id} label={`le lot ${l.numero_lot_fournisseur ?? l.numero_lot_ce}`} canDelete={canDelete} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

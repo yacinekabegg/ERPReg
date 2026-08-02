@@ -2,6 +2,7 @@ import PageHead from '@/components/PageHead';
 import { AccessDenied, ModuleNotice } from '@/components/Placeholder';
 import { CommandeFournisseurForm, EtatForm } from './ApproForms';
 import { ETAT_LABEL } from './labels';
+import DeleteButton from '@/components/DeleteButton';
 import { getAppUser, hasAnyRole } from '@/lib/appUser';
 import { getFournisseurs, getGammes, getOrigines } from '@/lib/refs';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
@@ -52,7 +53,7 @@ async function fetchAppro(): Promise<{ commandes: CmdRow[]; stats: Map<string, A
   }
 }
 
-function CmdTable({ rows, stats, pdfs, canWrite }: { rows: CmdRow[]; stats: Map<string, ApproStat>; pdfs: Map<string, string>; canWrite: boolean }) {
+function CmdTable({ rows, stats, pdfs, canWrite, canDelete }: { rows: CmdRow[]; stats: Map<string, ApproStat>; pdfs: Map<string, string>; canWrite: boolean; canDelete: boolean }) {
   if (rows.length === 0) {
     return (
       <div className="notice" style={{ border: 0, padding: 0 }}>
@@ -72,6 +73,7 @@ function CmdTable({ rows, stats, pdfs, canWrite }: { rows: CmdRow[]; stats: Map<
           <th>Reste</th>
           <th>Prévue</th>
           <th>État</th>
+          {canDelete && <th></th>}
         </tr>
       </thead>
       <tbody>
@@ -103,6 +105,11 @@ function CmdTable({ rows, stats, pdfs, canWrite }: { rows: CmdRow[]; stats: Map<
                   <span className="badge muted">{ETAT_LABEL[c.etat] ?? c.etat}</span>
                 )}
               </td>
+              {canDelete && (
+                <td>
+                  <DeleteButton type="commande_fournisseur" id={c.id} label={`la commande ${c.numero_bdc ?? c.numero}`} canDelete={canDelete} />
+                </td>
+              )}
             </tr>
           );
         })}
@@ -123,6 +130,7 @@ export default async function ApproPage() {
     );
   }
   const canWrite = user.roles.includes('prod_ops') || user.roles.includes('admin');
+  const canDelete = user.roles.includes('admin');
 
   const [{ commandes, stats, pdfs }, gammes, origines, fournisseurs] = await Promise.all([
     fetchAppro(),
@@ -167,7 +175,7 @@ export default async function ApproPage() {
 
       <div className="card" style={{ marginBottom: 20 }}>
         <h3 style={{ marginTop: 0 }}>En cours ({enCours.length})</h3>
-        <CmdTable rows={enCours} stats={stats} pdfs={pdfs} canWrite={canWrite} />
+        <CmdTable rows={enCours} stats={stats} pdfs={pdfs} canWrite={canWrite} canDelete={canDelete} />
         <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 0 }}>
           💡 La quantité « Reçu » se met à jour automatiquement quand une réception est rattachée à
           la commande (module Réception). La commande passe en « 6 · Réceptionnée » quand tout est reçu.
@@ -176,7 +184,7 @@ export default async function ApproPage() {
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Historique récent</h3>
-        <CmdTable rows={historique} stats={stats} pdfs={pdfs} canWrite={false} />
+        <CmdTable rows={historique} stats={stats} pdfs={pdfs} canWrite={false} canDelete={canDelete} />
       </div>
     </>
   );

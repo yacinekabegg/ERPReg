@@ -1,6 +1,7 @@
 import PageHead from '@/components/PageHead';
 import { AccessDenied, ModuleNotice } from '@/components/Placeholder';
 import { ClientForm, CommandeForm } from './CommandesForms';
+import DeleteButton from '@/components/DeleteButton';
 import { getAppUser, hasAnyRole } from '@/lib/appUser';
 import { getClientsWithAdresses, getGammes, getOrigines } from '@/lib/refs';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
@@ -9,6 +10,7 @@ import { redirect } from 'next/navigation';
 export const dynamic = 'force-dynamic';
 
 type CmdRow = {
+  id: string;
   numero: string | null;
   date_commande: string;
   statut: string;
@@ -20,7 +22,7 @@ async function fetchCommandes(): Promise<CmdRow[]> {
   try {
     const { data } = await createClient()
       .from('commandes_clients')
-      .select('numero, date_commande, statut, clients(raison_sociale)')
+      .select('id, numero, date_commande, statut, clients(raison_sociale)')
       .order('date_commande', { ascending: false })
       .limit(20);
     return (data as unknown as CmdRow[]) ?? [];
@@ -48,6 +50,7 @@ export default async function CommandesPage() {
     fetchCommandes(),
   ]);
   const canWrite = user.roles.includes('sales') || user.roles.includes('admin');
+  const canDelete = user.roles.includes('admin');
 
   return (
     <>
@@ -92,17 +95,23 @@ export default async function CommandesPage() {
                 <th>Date</th>
                 <th>Client</th>
                 <th>Statut</th>
+                {canDelete && <th></th>}
               </tr>
             </thead>
             <tbody>
               {commandes.map((c, i) => (
-                <tr key={c.numero ?? i}>
+                <tr key={c.id ?? i}>
                   <td>{c.numero}</td>
                   <td>{c.date_commande}</td>
                   <td>{c.clients?.raison_sociale}</td>
                   <td>
                     <span className="badge muted">{c.statut}</span>
                   </td>
+                  {canDelete && (
+                    <td>
+                      <DeleteButton type="commande_client" id={c.id} label={`la commande ${c.numero}`} canDelete={canDelete} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

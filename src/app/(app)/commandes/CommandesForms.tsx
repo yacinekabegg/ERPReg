@@ -100,6 +100,16 @@ export function CommandeForm({
   function updateLine(key: number, patch: Partial<Line>) {
     setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   }
+  function removeLine(key: number) {
+    setLines((ls) => (ls.length > 1 ? ls.filter((l) => l.key !== key) : ls));
+  }
+  // Change de type : un échantillon pré-remplit les quantités vides à 0,050 kg (50 g).
+  function changeType(t: string) {
+    setType(t);
+    if (t === 'echantillon') {
+      setLines((ls) => ls.map((l) => (l.quantite.trim() === '' ? { ...l, quantite: '0.050' } : l)));
+    }
+  }
 
   if (clients.length === 0) {
     return (
@@ -144,7 +154,7 @@ export function CommandeForm({
         </div>
         <div className="field">
           <label>Type</label>
-          <select name="type" value={type} onChange={(e) => setType(e.target.value)}>
+          <select name="type" value={type} onChange={(e) => changeType(e.target.value)}>
             <option value="commande">Commande</option>
             <option value="echantillon">Échantillon</option>
           </select>
@@ -214,6 +224,19 @@ export function CommandeForm({
               onChange={(e) => updateLine(l.key, { remarques: e.target.value })}
             />
           </div>
+          {lines.length > 1 && (
+            <div className="field" style={{ justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn ghost"
+                title="Supprimer cette ligne"
+                onClick={() => removeLine(l.key)}
+                style={{ color: 'var(--danger)' }}
+              >
+                ✕ Retirer
+              </button>
+            </div>
+          )}
         </div>
       ))}
 

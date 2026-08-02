@@ -1,6 +1,7 @@
 import PageHead from '@/components/PageHead';
 import { AccessDenied, ModuleNotice } from '@/components/Placeholder';
 import AnalyseForm from './AnalyseForm';
+import DeleteButton from '@/components/DeleteButton';
 import { getAppUser, hasAnyRole } from '@/lib/appUser';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
@@ -50,6 +51,7 @@ export default async function AnalysesPage() {
   }
 
   const { analyses, lots } = await load();
+  const canDelete = user.roles.includes('admin');
 
   return (
     <>
@@ -82,6 +84,7 @@ export default async function AnalysesPage() {
                 <th>Lot</th>
                 <th>Valeurs</th>
                 <th>Commentaire</th>
+                {canDelete && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -92,6 +95,11 @@ export default async function AnalysesPage() {
                   <td>{a.lots?.numero_lot_fournisseur ?? '—'}</td>
                   <td>{a.valeurs ?? '—'}</td>
                   <td>{a.commentaire ?? '—'}</td>
+                  {canDelete && (
+                    <td>
+                      <DeleteButton type="analyse" id={a.id} label="cette analyse" canDelete={canDelete} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
