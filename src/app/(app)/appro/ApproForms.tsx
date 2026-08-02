@@ -2,19 +2,10 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import { createCommandeFournisseur, setEtatCommande, type FormState } from './actions';
+import { ETAT_LABEL } from './labels';
 import type { Ref } from '@/lib/refs';
 
 const init: FormState = { ok: false, message: '' };
-
-export const ETAT_LABEL: Record<string, string> = {
-  demande: '1 · Demande (WhatsApp)',
-  proforma: '2 · Proforma envoyée',
-  paiement: '3 · Paiement envoyé',
-  production: '4 · Production lancée',
-  expedition: '5 · Expédition Turquie',
-  recue: '6 · Réceptionnée',
-  annulee: 'Annulée',
-};
 
 function Submit({ children, className = 'btn' }: { children: React.ReactNode; className?: string }) {
   const { pending } = useFormStatus();

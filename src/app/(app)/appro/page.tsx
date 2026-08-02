@@ -1,6 +1,7 @@
 import PageHead from '@/components/PageHead';
 import { AccessDenied, ModuleNotice } from '@/components/Placeholder';
-import { CommandeFournisseurForm, EtatForm, ETAT_LABEL } from './ApproForms';
+import { CommandeFournisseurForm, EtatForm } from './ApproForms';
+import { ETAT_LABEL } from './labels';
 import { getAppUser, hasAnyRole } from '@/lib/appUser';
 import { getFournisseurs, getGammes, getOrigines } from '@/lib/refs';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
