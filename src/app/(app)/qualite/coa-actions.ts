@@ -33,11 +33,12 @@ export async function soumettreCoA(_prev: FormState, formData: FormData): Promis
   const action = String(formData.get('action') || 'save');
   if (!lotId) return { ok: false, message: 'Lot introuvable.' };
 
-  // Recompose la structure CoA depuis le formulaire.
+  // Recompose la structure CoA depuis le formulaire (double résultat).
   const params: CoaData['params'] = {};
   for (const p of COA_ALL_PARAMS) {
     params[p.cle] = {
-      resultat: String(formData.get(`res_${p.cle}`) || '').trim(),
+      resultat_fournisseur: String(formData.get(`res_fourn_${p.cle}`) || '').trim(),
+      resultat_interne: String(formData.get(`res_int_${p.cle}`) || '').trim(),
       conforme: formData.get(`conf_${p.cle}`) === 'on',
     };
   }
@@ -50,11 +51,15 @@ export async function soumettreCoA(_prev: FormState, formData: FormData): Promis
     fonction: String(formData.get('fonction') || '').trim(),
     params,
   };
+  const note_interne = String(formData.get('note_interne') || '').trim() || null;
 
-  // Fusionne dans coa_infos (préserve d'éventuelles autres clés).
+  // Fusionne dans coa_infos (préserve d'éventuelles autres clés) + note interne (hors PDF).
   const { data: lotRow } = await supabase.from('lots').select('coa_infos').eq('id', lotId).single();
   const coa_infos = { ...((lotRow?.coa_infos as Record<string, unknown>) ?? {}), coa };
-  const { error: saveErr } = await supabase.from('lots').update({ coa_infos }).eq('id', lotId);
+  const { error: saveErr } = await supabase
+    .from('lots')
+    .update({ coa_infos, note_interne })
+    .eq('id', lotId);
   if (saveErr) return { ok: false, message: `Échec de l'enregistrement : ${saveErr.message}` };
 
   if (action !== 'generer') {
@@ -97,4 +102,38 @@ export async function soumettreCoA(_prev: FormState, formData: FormData): Promis
 
   revalidatePath(`/qualite/${lotId}`);
   return { ok: true, message: `CoA généré pour le lot ${coa.numero_lot}.` };
+}
+
+const CATEGORIES = ['coa_fournisseur', 'coa_interne', 'analyse', 'autre'];
+
+// Joint un document au lot (CoA fournisseur, CoA interne Eurofins, analyse…).
+export async function addLotDocument(_prev: FormState, formData: FormData): Promise<FormState> {
+  const g = await guard();
+  if (!g.ok) return { ok: false, message: g.message };
+  const { supabase, userId } = g;
+
+  const lotId = String(formData.get('lot_id') || '');
+  const categorie = String(formData.get('categorie') || 'autre');
+  const file = formData.get('fichier');
+  if (!lotId) return { ok: false, message: 'Lot introuvable.' };
+  if (!CATEGORIES.includes(categorie)) return { ok: false, message: 'Catégorie invalide.' };
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: 'Sélectionnez un fichier.' };
+
+  const path = `lots/${lotId}/${categorie}-${Date.now().toString(36)}-${file.name}`;
+  const { error: upErr } = await supabase.storage
+    .from('coa')
+    .upload(path, file, { upsert: true, contentType: file.type || 'application/octet-stream' });
+  if (upErr) return { ok: false, message: `Upload échoué : ${upErr.message}` };
+
+  const { error } = await supabase.from('lot_documents').insert({
+    lot_id: lotId,
+    categorie,
+    path,
+    filename: file.name,
+    created_by: userId,
+  });
+  if (error) return { ok: false, message: `Échec : ${error.message}` };
+
+  revalidatePath(`/qualite/${lotId}`);
+  return { ok: true, message: `Document « ${file.name} » ajouté.` };
 }

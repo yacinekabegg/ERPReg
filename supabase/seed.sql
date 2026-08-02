@@ -19,9 +19,7 @@ on conflict (code) do nothing;
 
 insert into public.emplacements (site, zone, libelle) values
   ('Principal', 'quarantaine', 'Zone quarantaine (lots en attente qualité)'),
-  ('Principal', 'libere',      'Zone stock libéré (vendable)'),
-  ('Principal', 'bloque',      'Zone lots bloqués / refusés'),
-  ('Principal', 'expedition',  'Zone préparation expédition');
+  ('Principal', 'libere',      'Zone stock libéré (vendable)');
 
 insert into public.transporteurs (nom, mode, url_tracking) values
   ('Colissimo', 'colis', 'https://www.laposte.fr/outils/suivre-vos-envois?code=');

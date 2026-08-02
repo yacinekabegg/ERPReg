@@ -2,7 +2,7 @@ import PageHead from '@/components/PageHead';
 import { AccessDenied, ModuleNotice } from '@/components/Placeholder';
 import { ClientForm, CommandeForm } from './CommandesForms';
 import { getAppUser, hasAnyRole } from '@/lib/appUser';
-import { getClientsWithAdresses, getGammes } from '@/lib/refs';
+import { getClientsWithAdresses, getGammes, getOrigines } from '@/lib/refs';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -37,9 +37,10 @@ export default async function CommandesPage() {
     );
   }
 
-  const [clients, gammes, commandes] = await Promise.all([
+  const [clients, gammes, origines, commandes] = await Promise.all([
     getClientsWithAdresses(),
     getGammes(),
+    getOrigines(),
     fetchCommandes(),
   ]);
   const canWrite = user.roles.includes('sales') || user.roles.includes('admin');
@@ -67,8 +68,8 @@ export default async function CommandesPage() {
           </div>
 
           <div className="card" style={{ marginBottom: 20 }}>
-            <h3 style={{ marginTop: 0 }}>Nouvelle commande</h3>
-            <CommandeForm clients={clients} gammes={gammes} />
+            <h3 style={{ marginTop: 0 }}>Nouvelle commande / échantillon</h3>
+            <CommandeForm clients={clients} gammes={gammes} origines={origines} />
           </div>
         </>
       )}

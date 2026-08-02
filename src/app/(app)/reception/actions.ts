@@ -27,13 +27,12 @@ export async function createLot(
 
   const gamme_id = String(formData.get('gamme_id') || '');
   const origine_id = String(formData.get('origine_id') || '');
-  const fournisseur_id = String(formData.get('fournisseur_id') || '') || null;
-  const granulometrie = String(formData.get('granulometrie') || '') || null;
+  let fournisseur_id = String(formData.get('fournisseur_id') || '') || null;
+  const fournisseur_autre = String(formData.get('fournisseur_autre') || '').trim();
   const quantite = Number(formData.get('quantite_recue'));
   const dluo = String(formData.get('dluo') || '') || null;
   const numero_lot_fournisseur = String(formData.get('numero_lot_fournisseur') || '').trim();
   const emplacement_id = String(formData.get('emplacement_id') || '') || null;
-  const format = String(formData.get('format') || 'sac');
   const commande_fournisseur_id = String(formData.get('commande_fournisseur_id') || '') || null;
 
   if (!gamme_id || !origine_id) {
@@ -48,14 +47,23 @@ export async function createLot(
 
   const supabase = createClient();
 
-  // 1) Insertion du lot (n° de lot CE généré par trigger, statut = en_attente).
+  // Fournisseur "Autre" : crée (ou retrouve) le fournisseur à la volée.
+  if (fournisseur_id === '__autre__') {
+    fournisseur_id = null;
+    if (fournisseur_autre) {
+      await supabase.from('fournisseurs').insert({ nom: fournisseur_autre }).select('id');
+      const { data: f } = await supabase.from('fournisseurs').select('id').eq('nom', fournisseur_autre).maybeSingle();
+      fournisseur_id = (f?.id as string) ?? null;
+    }
+  }
+
+  // 1) Insertion du lot (n° de lot interne CE généré par trigger, statut = en_attente).
   const { data: lot, error: lotErr } = await supabase
     .from('lots')
     .insert({
       gamme_id,
       origine_id,
       fournisseur_id,
-      granulometrie,
       quantite_recue: quantite,
       dluo,
       numero_lot_fournisseur,
@@ -70,11 +78,11 @@ export async function createLot(
     return { ok: false, message: `Erreur à l'enregistrement du lot : ${lotErr?.message ?? 'inconnue'}` };
   }
 
-  // 2) Mouvement de stock : entrée de la quantité reçue.
+  // 2) Mouvement de stock : entrée de la quantité reçue (toujours en sac).
   const { error: mvtErr } = await supabase.from('mouvements_stock').insert({
     lot_id: lot.id,
     type: 'entree',
-    format,
+    format: 'sac',
     quantite,
     utilisateur: user.id,
     reference: 'reception',
@@ -84,15 +92,26 @@ export async function createLot(
     return { ok: false, message: `Lot créé mais mouvement de stock en échec : ${mvtErr.message}` };
   }
 
-  // 3) Upload du CoA fournisseur (facultatif) dans le bucket Storage "coa".
-  const file = formData.get('coa');
-  if (file instanceof File && file.size > 0) {
-    const path = `lots/${lot.id}/coa-fournisseur`;
-    const { error: upErr } = await supabase.storage
-      .from('coa')
-      .upload(path, file, { upsert: true, contentType: file.type || 'application/pdf' });
-    if (!upErr) {
-      await supabase.from('lots').update({ coa_fournisseur_path: path }).eq('id', lot.id);
+  // 3) Documents fournisseur : BL et ATR (facultatifs) -> lot_documents.
+  for (const [champ, categorie] of [
+    ['bl', 'bl'],
+    ['atr', 'atr'],
+  ] as const) {
+    const file = formData.get(champ);
+    if (file instanceof File && file.size > 0) {
+      const path = `lots/${lot.id}/${categorie}-${file.name}`;
+      const { error: upErr } = await supabase.storage
+        .from('coa')
+        .upload(path, file, { upsert: true, contentType: file.type || 'application/octet-stream' });
+      if (!upErr) {
+        await supabase.from('lot_documents').insert({
+          lot_id: lot.id,
+          categorie,
+          path,
+          filename: file.name,
+          created_by: user.id,
+        });
+      }
     }
   }
 

@@ -3,6 +3,7 @@ import PageHead from '@/components/PageHead';
 import { AccessDenied } from '@/components/Placeholder';
 import { CoaCEForm, DecisionForm } from '../FicheForms';
 import CoaForm from '../CoaForm';
+import DocumentsForm, { type LotDoc } from '../DocumentsForm';
 import { defaultCoaData } from '@/lib/coa-template';
 import { getAppUser, hasAnyRole } from '@/lib/appUser';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
@@ -38,6 +39,7 @@ type Lot = {
   coa_circuegg_path: string | null;
   coa_infos: Record<string, unknown> | null;
   commentaire_qualite: string | null;
+  note_interne: string | null;
   gammes: { nom: string } | null;
   origines: { pays: string } | null;
   fournisseurs: { nom: string } | null;
@@ -71,7 +73,7 @@ export default async function FicheLotPage({ params }: { params: { id: string } 
   const { data } = await supabase
     .from('lots')
     .select(
-      'id, numero_lot_ce, numero_lot_fournisseur, granulometrie, date_reception, dluo, quantite_recue, statut, coa_fournisseur_path, coa_circuegg_path, coa_infos, commentaire_qualite, gammes(nom), origines(pays), fournisseurs(nom)',
+      'id, numero_lot_ce, numero_lot_fournisseur, granulometrie, date_reception, dluo, quantite_recue, statut, coa_fournisseur_path, coa_circuegg_path, coa_infos, commentaire_qualite, note_interne, gammes(nom), origines(pays), fournisseurs(nom)',
     )
     .eq('id', params.id)
     .maybeSingle();
@@ -80,15 +82,23 @@ export default async function FicheLotPage({ params }: { params: { id: string } 
   if (!lot) notFound();
 
   // Liens de téléchargement signés pour les CoA.
-  let coaFournUrl: string | null = null;
   let coaCEUrl: string | null = null;
-  if (lot.coa_fournisseur_path) {
-    const { data: s } = await supabase.storage.from('coa').createSignedUrl(lot.coa_fournisseur_path, 300);
-    coaFournUrl = s?.signedUrl ?? null;
-  }
   if (lot.coa_circuegg_path) {
     const { data: s } = await supabase.storage.from('coa').createSignedUrl(lot.coa_circuegg_path, 300);
     coaCEUrl = s?.signedUrl ?? null;
+  }
+
+  // Documents joints (CoA fournisseur, analyses…) avec liens signés.
+  const { data: docRows } = await supabase
+    .from('lot_documents')
+    .select('id, categorie, filename, path')
+    .eq('lot_id', lot.id)
+    .in('categorie', ['coa_fournisseur', 'coa_interne', 'analyse', 'autre'])
+    .order('created_at', { ascending: false });
+  const documents: LotDoc[] = [];
+  for (const d of (docRows as any[]) ?? []) {
+    const { data: s } = await supabase.storage.from('coa').createSignedUrl(d.path as string, 300);
+    documents.push({ id: d.id, categorie: d.categorie, filename: d.filename, url: s?.signedUrl ?? null });
   }
 
   const decided = ['libere', 'bloque', 'refuse'].includes(lot.statut);
@@ -113,24 +123,20 @@ export default async function FicheLotPage({ params }: { params: { id: string } 
         <dl className="dl" style={{ marginTop: 14 }}>
           <dt>Gamme</dt>
           <dd>{lot.gammes?.nom}</dd>
-          <dt>Granulométrie</dt>
-          <dd>{lot.granulometrie ?? '—'}</dd>
           <dt>Origine</dt>
           <dd>{lot.origines?.pays}</dd>
           <dt>Fournisseur</dt>
           <dd>{lot.fournisseurs?.nom ?? '—'}</dd>
           <dt>Quantité reçue</dt>
           <dd>{lot.quantite_recue} kg</dd>
-          <dt>N° interne (CE)</dt>
+          <dt>N° lot interne</dt>
           <dd>{lot.numero_lot_ce ?? '—'}</dd>
           <dt>Réception</dt>
           <dd>{lot.date_reception}</dd>
           <dt>DLUO</dt>
           <dd>{lot.dluo ?? '—'}</dd>
-          <dt>CoA fournisseur</dt>
-          <dd>{coaFournUrl ? <a href={coaFournUrl}>Télécharger le PDF</a> : '—'}</dd>
-          <dt>CoA Circul&apos;Egg</dt>
-          <dd>{coaCEUrl ? <a href={coaCEUrl}>Télécharger le PDF</a> : '— (à ajouter)'}</dd>
+          <dt>CoA Circul&apos;Egg généré</dt>
+          <dd>{coaCEUrl ? <a href={coaCEUrl}>Télécharger le PDF</a> : '— (à générer)'}</dd>
           {lot.commentaire_qualite && (
             <>
               <dt>Commentaire qualité</dt>
@@ -141,18 +147,32 @@ export default async function FicheLotPage({ params }: { params: { id: string } 
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
+        <h3 style={{ marginTop: 0 }}>Documents & analyses reçus</h3>
+        <p style={{ color: 'var(--muted)', marginTop: 0 }}>
+          Joignez plusieurs fichiers : CoA fournisseur, analyses du lot (Turquie), CoA / analyses
+          internes (Eurofins…).
+        </p>
+        <DocumentsForm lotId={lot.id} documents={documents} />
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
         <h3 style={{ marginTop: 0 }}>CoA Circul&apos;Egg — génération</h3>
         <p style={{ color: 'var(--muted)', marginTop: 0 }}>
-          Saisissez les résultats et cochez « conforme » sur chaque paramètre. Le PDF charté est
+          Saisissez les résultats (fournisseur / interne) et cochez « conforme ». Le PDF charté est
           généré une fois tous les paramètres validés, puis rattaché au lot.
         </p>
-        <CoaForm lotId={lot.id} data={defaultCoaData(lot)} coaUrl={coaCEUrl} />
+        <CoaForm
+          lotId={lot.id}
+          data={defaultCoaData(lot)}
+          coaUrl={coaCEUrl}
+          noteInterne={lot.note_interne}
+        />
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
         <h3 style={{ marginTop: 0 }}>Joindre un CoA externe (repli)</h3>
         <p style={{ color: 'var(--muted)', marginTop: 0 }}>
-          Si besoin, vous pouvez aussi attacher un PDF produit ailleurs (remplace le CoA généré).
+          Si besoin, vous pouvez aussi attacher un PDF de CoA produit ailleurs (remplace le CoA généré).
         </p>
         <CoaCEForm lotId={lot.id} hasCoa={!!lot.coa_circuegg_path} />
       </div>

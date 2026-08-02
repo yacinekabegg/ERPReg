@@ -77,18 +77,23 @@ export function ClientForm() {
   );
 }
 
-type Line = { key: number; gamme_id: string; quantite: string };
+type Line = { key: number; gamme_id: string; origine_id: string; quantite: string; remarques: string };
 
 export function CommandeForm({
   clients,
   gammes,
+  origines,
 }: {
   clients: ClientWithAdresses[];
   gammes: Ref[];
+  origines: Ref[];
 }) {
   const [state, action] = useFormState(createCommandeAction, init);
   const [clientId, setClientId] = useState('');
-  const [lines, setLines] = useState<Line[]>([{ key: 1, gamme_id: '', quantite: '' }]);
+  const [type, setType] = useState('commande');
+  const [lines, setLines] = useState<Line[]>([
+    { key: 1, gamme_id: '', origine_id: '', quantite: '', remarques: '' },
+  ]);
 
   const adresses = clients.find((c) => c.id === clientId)?.adresses ?? [];
 
@@ -138,12 +143,28 @@ export function CommandeForm({
           </select>
         </div>
         <div className="field">
-          <label htmlFor="date_souhaitee">Date souhaitée</label>
+          <label>Type</label>
+          <select name="type" value={type} onChange={(e) => setType(e.target.value)}>
+            <option value="commande">Commande</option>
+            <option value="echantillon">Échantillon</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="priorite">Priorité</label>
+          <select id="priorite" name="priorite" defaultValue="normale">
+            <option value="normale">Normale</option>
+            <option value="urgente">Urgente</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="date_souhaitee">Date voulue</label>
           <input id="date_souhaitee" name="date_souhaitee" type="date" />
         </div>
       </div>
 
-      <label style={{ fontWeight: 600, fontSize: 13, color: 'var(--muted)' }}>Lignes</label>
+      <label style={{ fontWeight: 600, fontSize: 13, color: 'var(--muted)' }}>
+        Lignes {type === 'echantillon' && '(échantillon)'}
+      </label>
       {lines.map((l) => (
         <div key={l.key} className="grid cols-3" style={{ marginTop: 6 }}>
           <div className="field">
@@ -152,10 +173,24 @@ export function CommandeForm({
               value={l.gamme_id}
               onChange={(e) => updateLine(l.key, { gamme_id: e.target.value })}
             >
-              <option value="">Gamme…</option>
+              <option value="">Grade / gamme…</option>
               {gammes.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <select
+              name="origine_id"
+              value={l.origine_id}
+              onChange={(e) => updateLine(l.key, { origine_id: e.target.value })}
+            >
+              <option value="">Origine (indiff.)</option>
+              {origines.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
                 </option>
               ))}
             </select>
@@ -171,6 +206,14 @@ export function CommandeForm({
               onChange={(e) => updateLine(l.key, { quantite: e.target.value })}
             />
           </div>
+          <div className="field">
+            <input
+              name="remarques"
+              placeholder="Remarques (ex. premium)"
+              value={l.remarques}
+              onChange={(e) => updateLine(l.key, { remarques: e.target.value })}
+            />
+          </div>
         </div>
       ))}
 
@@ -178,14 +221,21 @@ export function CommandeForm({
         <button
           type="button"
           className="btn ghost"
-          onClick={() => setLines((ls) => [...ls, { key: Date.now(), gamme_id: '', quantite: '' }])}
+          onClick={() =>
+            setLines((ls) => [...ls, { key: Date.now(), gamme_id: '', origine_id: '', quantite: '', remarques: '' }])
+          }
         >
           + Ajouter une ligne
         </button>
       </div>
 
-      <div className="btn-row" style={{ marginTop: 12 }}>
-        <Submit>Créer la commande</Submit>
+      <div className="field" style={{ marginTop: 12 }}>
+        <label htmlFor="commentaire">Commentaire</label>
+        <input id="commentaire" name="commentaire" />
+      </div>
+
+      <div className="btn-row" style={{ marginTop: 4 }}>
+        <Submit>Créer</Submit>
         <Status s={state} />
       </div>
     </form>

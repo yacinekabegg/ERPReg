@@ -1,8 +1,11 @@
 'use server';
 
+import React from 'react';
+import { renderToBuffer } from '@react-pdf/renderer';
 import { revalidatePath } from 'next/cache';
 import { createClient, supabaseConfigured } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
+import { BonCommandeDocument } from '@/components/pdf/BonCommandeDocument';
 
 export type FormState = { ok: boolean; message: string };
 
@@ -53,9 +56,42 @@ export async function createCommandeFournisseur(_prev: FormState, formData: Form
     .single();
   if (error || !data) return { ok: false, message: `Échec : ${error?.message ?? 'inconnu'}` };
 
+  // Génère le bon de commande fournisseur (PDF) et le rattache à la commande.
+  try {
+    const { data: full } = await supabase
+      .from('commandes_fournisseur')
+      .select('numero, numero_bdc, quantite_attendue, date_commande, date_prevue, commentaires, gammes(nom), origines(pays), fournisseurs(nom)')
+      .eq('id', data.id)
+      .single();
+    if (full) {
+      const f = full as any;
+      const element = React.createElement(BonCommandeDocument, {
+        data: {
+          numero: f.numero,
+          numero_bdc: f.numero_bdc,
+          fournisseur: f.fournisseurs?.nom ?? '—',
+          gamme: f.gammes?.nom ?? '—',
+          origine: f.origines?.pays ?? '—',
+          quantite: Number(f.quantite_attendue),
+          date_commande: f.date_commande,
+          date_prevue: f.date_prevue,
+          commentaires: f.commentaires,
+        },
+      }) as unknown as Parameters<typeof renderToBuffer>[0];
+      const buffer = await renderToBuffer(element);
+      const path = `commandes-fournisseur/${data.id}.pdf`;
+      const { error: upErr } = await supabase.storage
+        .from('coa')
+        .upload(path, buffer, { upsert: true, contentType: 'application/pdf' });
+      if (!upErr) await supabase.from('commandes_fournisseur').update({ pdf_path: path }).eq('id', data.id);
+    }
+  } catch {
+    // La commande est créée même si la génération du PDF échoue.
+  }
+
   revalidatePath('/appro');
   revalidatePath('/dashboard');
-  return { ok: true, message: `Commande ${data.numero} créée.` };
+  return { ok: true, message: `Commande ${data.numero} créée (bon de commande généré).` };
 }
 
 // Avance (ou change) l'état d'une commande dans le workflow 6 étapes.

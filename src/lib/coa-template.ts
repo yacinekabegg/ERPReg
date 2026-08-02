@@ -43,7 +43,9 @@ export const COA_SECTIONS: CoaSection[] = [
     titreFr: 'Physico-chimie',
     titreEn: 'Physico-chemistry',
     params: [
-      { cle: 'granulometrie', labelFr: 'Granulométrie', labelEn: 'Granulometry', methode: 'Granulométrie laser en voie sèche', critere: '< 250', unite: 'µm', type: 'mesure' },
+      // Granulométrie : pas de critère codé en dur (varie selon la gamme), saisie libre.
+      { cle: 'granulo_d50', labelFr: 'Granulométrie D50', labelEn: 'Granulometry D50', methode: 'Granulométrie laser en voie sèche', critere: '', unite: 'µm', type: 'mesure' },
+      { cle: 'granulo_d97', labelFr: 'Granulométrie D97', labelEn: 'Granulometry D97', methode: 'Granulométrie laser en voie sèche', critere: '', unite: 'µm', type: 'mesure' },
       { cle: 'extrait_sec', labelFr: 'Extrait sec', labelEn: 'Dry extract', methode: 'ISO 787-2 2021 adaptée', critere: '> 90', unite: '%', type: 'mesure' },
     ],
   },
@@ -68,7 +70,8 @@ export const COA_DECLARATION_EN =
   "I, the undersigned {signataire}, acting as {fonction}, certify that the products sent by the company Circul'Egg have undergone the necessary checks, attesting that they do not present any danger for their intended use. I declare that these products are not subject to any quality or safety risks, and that they comply with the regulations applicable to the product.";
 
 // Structure des données CoA stockées dans lots.coa_infos.
-export type CoaParamValue = { resultat: string; conforme: boolean };
+// Deux résultats par paramètre : fournisseur et interne (Circul'Egg).
+export type CoaParamValue = { resultat_fournisseur: string; resultat_interne: string; conforme: boolean };
 export type CoaData = {
   produit: string;
   numero_lot: string;
@@ -78,6 +81,13 @@ export type CoaData = {
   fonction: string;
   params: Record<string, CoaParamValue>;
 };
+
+// Valeur retenue pour le PDF : priorité au résultat interne (Circul'Egg),
+// sinon le résultat fournisseur.
+export function resultatEffectif(v: CoaParamValue | undefined): string {
+  if (!v) return '';
+  return (v.resultat_interne || '').trim() || (v.resultat_fournisseur || '').trim();
+}
 
 type LotLike = {
   numero_lot_fournisseur?: string | null;
@@ -93,9 +103,10 @@ export function defaultCoaData(lot: LotLike): CoaData {
   const saved = (lot.coa_infos?.coa as Partial<CoaData> | undefined) ?? undefined;
   const params: Record<string, CoaParamValue> = {};
   for (const p of COA_ALL_PARAMS) {
-    const prev = saved?.params?.[p.cle];
+    const prev = saved?.params?.[p.cle] as Partial<CoaParamValue> | undefined;
     params[p.cle] = {
-      resultat: prev?.resultat ?? (p.type === 'porte' ? p.defaut ?? '' : ''),
+      resultat_fournisseur: prev?.resultat_fournisseur ?? '',
+      resultat_interne: prev?.resultat_interne ?? (p.type === 'porte' ? p.defaut ?? '' : ''),
       conforme: prev?.conforme ?? false,
     };
   }
@@ -110,9 +121,9 @@ export function defaultCoaData(lot: LotLike): CoaData {
   };
 }
 
-// Tous les paramètres saisis (résultat non vide) sont-ils cochés conformes ?
+// Tous les paramètres saisis (résultat effectif non vide) sont-ils cochés conformes ?
 export function tousConformes(data: CoaData): boolean {
-  const saisis = COA_ALL_PARAMS.filter((p) => (data.params[p.cle]?.resultat ?? '').trim() !== '');
+  const saisis = COA_ALL_PARAMS.filter((p) => resultatEffectif(data.params[p.cle]) !== '');
   if (saisis.length === 0) return false;
   return saisis.every((p) => data.params[p.cle]?.conforme === true);
 }

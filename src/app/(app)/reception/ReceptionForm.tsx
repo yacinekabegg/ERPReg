@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { createLot, type FormState } from './actions';
 
@@ -32,6 +33,7 @@ export default function ReceptionForm({
   disabled?: boolean;
 }) {
   const [state, formAction] = useFormState(createLot, initialState);
+  const [fournisseur, setFournisseur] = useState('');
 
   return (
     <form action={formAction}>
@@ -48,16 +50,34 @@ export default function ReceptionForm({
         </div>
 
         <div className="field">
+          <label>N° de lot interne</label>
+          <input value="Généré automatiquement (CE-…)" disabled readOnly />
+        </div>
+
+        <div className="field">
           <label htmlFor="fournisseur_id">Fournisseur</label>
-          <select id="fournisseur_id" name="fournisseur_id" defaultValue="">
+          <select
+            id="fournisseur_id"
+            name="fournisseur_id"
+            value={fournisseur}
+            onChange={(e) => setFournisseur(e.target.value)}
+          >
             <option value="">—</option>
             {fournisseurs.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.label}
               </option>
             ))}
+            <option value="__autre__">Autre…</option>
           </select>
         </div>
+
+        {fournisseur === '__autre__' && (
+          <div className="field">
+            <label htmlFor="fournisseur_autre">Nouveau fournisseur</label>
+            <input id="fournisseur_autre" name="fournisseur_autre" placeholder="Nom du fournisseur" />
+          </div>
+        )}
 
         <div className="field">
           <label htmlFor="gamme_id">Gamme *</label>
@@ -71,11 +91,6 @@ export default function ReceptionForm({
               </option>
             ))}
           </select>
-        </div>
-
-        <div className="field">
-          <label htmlFor="granulometrie">Granulométrie</label>
-          <input id="granulometrie" name="granulometrie" type="text" placeholder="ex. 200-220µm" />
         </div>
 
         <div className="field">
@@ -94,24 +109,7 @@ export default function ReceptionForm({
 
         <div className="field">
           <label htmlFor="quantite_recue">Quantité reçue (kg) *</label>
-          <input
-            id="quantite_recue"
-            name="quantite_recue"
-            type="number"
-            step="0.001"
-            min="0"
-            required
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="format">Format</label>
-          <select id="format" name="format" defaultValue="sac">
-            <option value="sac">Sac</option>
-            <option value="echantillon">Échantillon</option>
-            <option value="echantillotheque">Échantillothèque</option>
-            <option value="nc">NC (non conforme)</option>
-          </select>
+          <input id="quantite_recue" name="quantite_recue" type="number" step="0.001" min="0" required />
         </div>
 
         <div className="field">
@@ -144,9 +142,15 @@ export default function ReceptionForm({
         </div>
       </div>
 
-      <div className="field">
-        <label htmlFor="coa">CoA fournisseur (PDF)</label>
-        <input id="coa" name="coa" type="file" accept="application/pdf,.pdf" />
+      <div className="grid cols-3">
+        <div className="field">
+          <label htmlFor="bl">Bon de livraison (BL)</label>
+          <input id="bl" name="bl" type="file" accept="application/pdf,.pdf,image/*" />
+        </div>
+        <div className="field">
+          <label htmlFor="atr">ATR (document douanier)</label>
+          <input id="atr" name="atr" type="file" accept="application/pdf,.pdf,image/*" />
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
@@ -155,6 +159,9 @@ export default function ReceptionForm({
           <span className={state.ok ? 'badge ok' : 'badge danger'}>{state.message}</span>
         )}
       </div>
+      <p style={{ color: 'var(--muted)', fontSize: 13 }}>
+        Le CoA fournisseur et les analyses se joignent ensuite dans l&apos;onglet Qualité (plusieurs fichiers possibles).
+      </p>
 
       {disabled && (
         <p className="error" style={{ marginTop: 12 }}>

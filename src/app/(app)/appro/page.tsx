@@ -17,28 +17,37 @@ type CmdRow = {
   date_commande: string;
   date_prevue: string | null;
   commentaires: string | null;
+  pdf_path: string | null;
   gammes: { nom: string } | null;
   fournisseurs: { nom: string } | null;
 };
 type ApproStat = { id: string; quantite_recue: number; reste_a_recevoir: number; en_retard: boolean; jours_retard: number };
 
-async function fetchAppro(): Promise<{ commandes: CmdRow[]; stats: Map<string, ApproStat> }> {
-  if (!supabaseConfigured()) return { commandes: [], stats: new Map() };
+async function fetchAppro(): Promise<{ commandes: CmdRow[]; stats: Map<string, ApproStat>; pdfs: Map<string, string> }> {
+  if (!supabaseConfigured()) return { commandes: [], stats: new Map(), pdfs: new Map() };
   const supabase = createClient();
   const [cmdRes, statRes] = await Promise.all([
     supabase
       .from('commandes_fournisseur')
-      .select('id, numero, numero_bdc, etat, quantite_attendue, date_commande, date_prevue, commentaires, gammes(nom), fournisseurs(nom)')
+      .select('id, numero, numero_bdc, etat, quantite_attendue, date_commande, date_prevue, commentaires, pdf_path, gammes(nom), fournisseurs(nom)')
       .order('date_commande', { ascending: false })
       .limit(100),
     supabase.from('v_appro').select('id, quantite_recue, reste_a_recevoir, en_retard, jours_retard'),
   ]);
   const stats = new Map<string, ApproStat>();
   for (const s of (statRes.data as unknown as ApproStat[]) ?? []) stats.set(s.id, s);
-  return { commandes: (cmdRes.data as unknown as CmdRow[]) ?? [], stats };
+  const commandes = (cmdRes.data as unknown as CmdRow[]) ?? [];
+  const pdfs = new Map<string, string>();
+  for (const c of commandes) {
+    if (c.pdf_path) {
+      const { data: sig } = await supabase.storage.from('coa').createSignedUrl(c.pdf_path, 300);
+      if (sig?.signedUrl) pdfs.set(c.id, sig.signedUrl);
+    }
+  }
+  return { commandes, stats, pdfs };
 }
 
-function CmdTable({ rows, stats, canWrite }: { rows: CmdRow[]; stats: Map<string, ApproStat>; canWrite: boolean }) {
+function CmdTable({ rows, stats, pdfs, canWrite }: { rows: CmdRow[]; stats: Map<string, ApproStat>; pdfs: Map<string, string>; canWrite: boolean }) {
   if (rows.length === 0) {
     return (
       <div className="notice" style={{ border: 0, padding: 0 }}>
@@ -65,7 +74,14 @@ function CmdTable({ rows, stats, canWrite }: { rows: CmdRow[]; stats: Map<string
           const s = stats.get(c.id);
           return (
             <tr key={c.id}>
-              <td>{c.numero_bdc ?? c.numero}</td>
+              <td>
+                {c.numero_bdc ?? c.numero}{' '}
+                {pdfs.get(c.id) && (
+                  <a href={pdfs.get(c.id)} target="_blank" rel="noreferrer" title="Bon de commande PDF">
+                    📄
+                  </a>
+                )}
+              </td>
               <td>{c.fournisseurs?.nom ?? '—'}</td>
               <td>{c.gammes?.nom}</td>
               <td>{c.quantite_attendue}</td>
@@ -103,7 +119,7 @@ export default async function ApproPage() {
   }
   const canWrite = user.roles.includes('prod_ops') || user.roles.includes('admin');
 
-  const [{ commandes, stats }, gammes, origines, fournisseurs] = await Promise.all([
+  const [{ commandes, stats, pdfs }, gammes, origines, fournisseurs] = await Promise.all([
     fetchAppro(),
     getGammes(),
     getOrigines(),
@@ -146,7 +162,7 @@ export default async function ApproPage() {
 
       <div className="card" style={{ marginBottom: 20 }}>
         <h3 style={{ marginTop: 0 }}>En cours ({enCours.length})</h3>
-        <CmdTable rows={enCours} stats={stats} canWrite={canWrite} />
+        <CmdTable rows={enCours} stats={stats} pdfs={pdfs} canWrite={canWrite} />
         <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 0 }}>
           💡 La quantité « Reçu » se met à jour automatiquement quand une réception est rattachée à
           la commande (module Réception). La commande passe en « 6 · Réceptionnée » quand tout est reçu.
@@ -155,7 +171,7 @@ export default async function ApproPage() {
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Historique récent</h3>
-        <CmdTable rows={historique} stats={stats} canWrite={false} />
+        <CmdTable rows={historique} stats={stats} pdfs={pdfs} canWrite={false} />
       </div>
     </>
   );

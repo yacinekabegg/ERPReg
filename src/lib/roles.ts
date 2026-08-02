@@ -17,8 +17,30 @@ export type NavItem = {
   description: string;
 };
 
-// Navigation par module. Filtrée selon les rôles de l'utilisateur.
+// Navigation par module — ordre du flux : Appro → Réception → Qualité → Stock →
+// Commande client → Départ → Suivi analyses → Admin. Filtrée selon les rôles.
 export const NAV: NavItem[] = [
+  {
+    href: '/appro',
+    label: 'Appro',
+    icon: '📦',
+    roles: ['prod_ops', 'admin'],
+    description: 'Commandes fournisseur, arrivées prévues, retards',
+  },
+  {
+    href: '/reception',
+    label: 'Réception',
+    icon: '📥',
+    roles: ['prod_ops', 'admin'],
+    description: 'Entrée des lots et documents fournisseur (BL / ATR)',
+  },
+  {
+    href: '/qualite',
+    label: 'Qualité',
+    icon: '🧪',
+    roles: ['qualite', 'admin'],
+    description: 'Validation des lots, CoA et génération du certificat',
+  },
   {
     href: '/dashboard',
     label: 'Stock',
@@ -27,39 +49,25 @@ export const NAV: NavItem[] = [
     description: 'Stock disponible par gamme et origine',
   },
   {
-    href: '/reception',
-    label: 'Réception',
-    icon: '📥',
-    roles: ['prod_ops', 'admin'],
-    description: 'Entrée des lots et upload du CoA fournisseur',
-  },
-  {
-    href: '/qualite',
-    label: 'Qualité',
-    icon: '🧪',
-    roles: ['qualite', 'admin'],
-    description: 'Validation des lots : Libérer / Bloquer / Refuser',
+    href: '/commandes',
+    label: 'Commande client',
+    icon: '🧾',
+    roles: ['sales', 'prod_ops', 'admin'],
+    description: 'Commandes et échantillons clients',
   },
   {
     href: '/departs',
-    label: 'Départs',
+    label: 'Départ',
     icon: '🚚',
-    roles: ['sales', 'depart', 'admin'],
-    description: 'Demandes de départ (échantillon / commande) et expéditions',
+    roles: ['depart', 'sales', 'admin'],
+    description: 'Préparation et expédition des commandes',
   },
   {
-    href: '/commandes',
-    label: 'Commandes',
-    icon: '🧾',
-    roles: ['sales', 'prod_ops', 'admin'],
-    description: 'Commandes clients',
-  },
-  {
-    href: '/appro',
-    label: 'Appro',
-    icon: '📦',
-    roles: ['prod_ops', 'admin'],
-    description: 'Arrivées prévues et retards',
+    href: '/analyses',
+    label: 'Suivi analyses',
+    icon: '🔬',
+    roles: ['qualite', 'admin'],
+    description: 'Registre des analyses ponctuelles et biannuelles',
   },
   {
     href: '/admin',

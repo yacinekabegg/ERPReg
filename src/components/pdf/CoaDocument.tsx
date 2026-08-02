@@ -5,6 +5,7 @@ import {
   COA_ENTREPRISE,
   COA_DECLARATION_FR,
   COA_DECLARATION_EN,
+  resultatEffectif,
   type CoaData,
 } from '@/lib/coa-template';
 
@@ -100,7 +101,7 @@ export function CoaDocument({ data }: { data: CoaData }) {
               <Text style={[s.cUnit, s.thText]}>Unité</Text>
             </View>
             {section.params.map((p) => {
-              const v = data.params[p.cle];
+              const res = resultatEffectif(data.params[p.cle]);
               return (
                 <View key={p.cle} style={s.tr}>
                   <View style={s.cName}>
@@ -108,8 +109,8 @@ export function CoaDocument({ data }: { data: CoaData }) {
                     <Text style={s.labelEn}>{p.labelEn}</Text>
                   </View>
                   <Text style={s.cMethod}>{p.methode}</Text>
-                  <Text style={s.cCrit}>{p.critere}</Text>
-                  <Text style={s.cRes}>{v?.resultat || '—'}</Text>
+                  <Text style={s.cCrit}>{p.critere || '—'}</Text>
+                  <Text style={s.cRes}>{res || '—'}</Text>
                   <Text style={s.cUnit}>{p.unite}</Text>
                 </View>
               );

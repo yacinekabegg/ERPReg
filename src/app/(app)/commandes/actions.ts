@@ -69,10 +69,20 @@ export async function createCommandeAction(_prev: FormState, formData: FormData)
   const client_id = String(formData.get('client_id') || '');
   if (!client_id) return { ok: false, message: 'Sélectionnez un client.' };
 
+  const type = String(formData.get('type') || 'commande');
+  if (!['echantillon', 'commande'].includes(type)) return { ok: false, message: 'Type invalide.' };
+
   const gammes = formData.getAll('gamme_id').map(String);
+  const origines = formData.getAll('origine_id').map(String);
   const qtes = formData.getAll('quantite').map((v) => Number(v));
+  const remarques = formData.getAll('remarques').map(String);
   const lignes = gammes
-    .map((gamme_id, i) => ({ gamme_id, quantite: qtes[i] }))
+    .map((gamme_id, i) => ({
+      gamme_id,
+      origine_id: origines[i] || null,
+      quantite: qtes[i],
+      remarques: remarques[i] || null,
+    }))
     .filter((l) => l.gamme_id && Number.isFinite(l.quantite) && l.quantite > 0);
   if (lignes.length === 0) return { ok: false, message: 'Ajoutez au moins une ligne (gamme + quantité).' };
 
@@ -80,10 +90,13 @@ export async function createCommandeAction(_prev: FormState, formData: FormData)
   const { data: cmd, error } = await supabase
     .from('commandes_clients')
     .insert({
-      numero: ref('CMD'),
+      numero: ref(type === 'echantillon' ? 'ECH' : 'CMD'),
       client_id,
       adresse_id: String(formData.get('adresse_id') || '') || null,
+      type,
+      priorite: String(formData.get('priorite') || 'normale'),
       date_souhaitee: String(formData.get('date_souhaitee') || '') || null,
+      commentaire: String(formData.get('commentaire') || '') || null,
       statut: 'confirmee',
       created_by: userId,
     })
@@ -91,11 +104,18 @@ export async function createCommandeAction(_prev: FormState, formData: FormData)
     .single();
   if (error || !cmd) return { ok: false, message: `Échec : ${error?.message ?? 'inconnu'}` };
 
-  const { error: lErr } = await supabase
-    .from('lignes_commande')
-    .insert(lignes.map((l) => ({ commande_id: cmd.id, gamme_id: l.gamme_id, quantite: l.quantite })));
+  const { error: lErr } = await supabase.from('lignes_commande').insert(
+    lignes.map((l) => ({
+      commande_id: cmd.id,
+      gamme_id: l.gamme_id,
+      origine_id: l.origine_id,
+      quantite: l.quantite,
+      remarques: l.remarques,
+    })),
+  );
   if (lErr) return { ok: false, message: `Commande créée mais lignes en échec : ${lErr.message}` };
 
   revalidatePath('/commandes');
-  return { ok: true, message: `Commande ${cmd.numero} créée.` };
+  revalidatePath('/departs');
+  return { ok: true, message: `${type === 'echantillon' ? 'Échantillon' : 'Commande'} ${cmd.numero} créé(e).` };
 }

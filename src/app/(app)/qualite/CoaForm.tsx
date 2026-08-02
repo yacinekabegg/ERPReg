@@ -16,9 +16,20 @@ function Btn({ children, value, className = 'btn', disabled }: { children: React
   );
 }
 
-type PState = Record<string, { resultat: string; conforme: boolean }>;
+type PVal = { resultat_fournisseur: string; resultat_interne: string; conforme: boolean };
+type PState = Record<string, PVal>;
 
-export default function CoaForm({ lotId, data, coaUrl }: { lotId: string; data: CoaData; coaUrl: string | null }) {
+export default function CoaForm({
+  lotId,
+  data,
+  coaUrl,
+  noteInterne,
+}: {
+  lotId: string;
+  data: CoaData;
+  coaUrl: string | null;
+  noteInterne: string | null;
+}) {
   const [state, action] = useFormState(soumettreCoA, init);
   const [params, setParams] = useState<PState>(() => {
     const p: PState = {};
@@ -26,10 +37,11 @@ export default function CoaForm({ lotId, data, coaUrl }: { lotId: string; data: 
     return p;
   });
 
-  const set = (cle: string, patch: Partial<{ resultat: string; conforme: boolean }>) =>
+  const set = (cle: string, patch: Partial<PVal>) =>
     setParams((s) => ({ ...s, [cle]: { ...s[cle], ...patch } }));
 
-  const saisis = COA_ALL_PARAMS.filter((p) => (params[p.cle]?.resultat ?? '').trim() !== '');
+  const effectif = (v: PVal) => (v.resultat_interne || '').trim() || (v.resultat_fournisseur || '').trim();
+  const saisis = COA_ALL_PARAMS.filter((p) => effectif(params[p.cle]) !== '');
   const canGenerate = saisis.length > 0 && saisis.every((p) => params[p.cle]?.conforme);
 
   return (
@@ -73,7 +85,8 @@ export default function CoaForm({ lotId, data, coaUrl }: { lotId: string; data: 
               <tr>
                 <th>Paramètre</th>
                 <th>Critère</th>
-                <th>Résultat</th>
+                <th>Résultat fournisseur</th>
+                <th>Résultat interne (Circul&apos;Egg)</th>
                 <th>Unité</th>
                 <th style={{ textAlign: 'center' }}>Conforme</th>
               </tr>
@@ -85,13 +98,21 @@ export default function CoaForm({ lotId, data, coaUrl }: { lotId: string; data: 
                     {p.labelFr}
                     {p.type === 'porte' && <span className="badge muted" style={{ marginLeft: 6 }}>porté</span>}
                   </td>
-                  <td style={{ color: 'var(--muted)' }}>{p.critere}</td>
+                  <td style={{ color: 'var(--muted)' }}>{p.critere || '—'}</td>
                   <td>
                     <input
-                      name={`res_${p.cle}`}
-                      value={params[p.cle]?.resultat ?? ''}
-                      onChange={(e) => set(p.cle, { resultat: e.target.value })}
-                      style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 6, width: 120 }}
+                      name={`res_fourn_${p.cle}`}
+                      value={params[p.cle]?.resultat_fournisseur ?? ''}
+                      onChange={(e) => set(p.cle, { resultat_fournisseur: e.target.value })}
+                      style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 6, width: 110 }}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      name={`res_int_${p.cle}`}
+                      value={params[p.cle]?.resultat_interne ?? ''}
+                      onChange={(e) => set(p.cle, { resultat_interne: e.target.value })}
+                      style={{ padding: '6px 8px', border: '1px solid var(--brand)', borderRadius: 6, width: 110 }}
                     />
                   </td>
                   <td style={{ color: 'var(--muted)' }}>{p.unite}</td>
@@ -110,7 +131,20 @@ export default function CoaForm({ lotId, data, coaUrl }: { lotId: string; data: 
         </div>
       ))}
 
-      <div className="btn-row" style={{ marginTop: 16 }}>
+      <div className="field" style={{ marginTop: 14 }}>
+        <label htmlFor="note_interne">Note interne (dérogation, non imprimée sur le CoA)</label>
+        <textarea
+          id="note_interne"
+          name="note_interne"
+          defaultValue={noteInterne ?? ''}
+          placeholder="ex. Protéines à 78 % dérogées le… — visible en interne uniquement"
+        />
+      </div>
+      <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
+        Le PDF utilise le résultat <strong>interne</strong> si rempli, sinon le résultat fournisseur.
+      </p>
+
+      <div className="btn-row" style={{ marginTop: 8 }}>
         <Btn value="save" className="btn ghost">Enregistrer</Btn>
         <Btn value="generer" disabled={!canGenerate}>📄 Générer le CoA</Btn>
         {coaUrl && (

@@ -244,6 +244,11 @@ export default async function DashboardPage() {
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Lots</h3>
+        <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
+          <strong>Stock</strong> = quantité physique du lot. <strong>Dispo</strong> = quantité
+          vendable = stock d&apos;un lot <strong>libéré</strong> moins le réservé (0 tant que le lot
+          n&apos;est pas libéré par la Qualité).
+        </p>
         {lots.length === 0 ? (
           <div className="notice" style={{ border: 0, padding: 0 }}>
             Aucun lot pour l'instant. Les lots apparaîtront ici dès la première réception
