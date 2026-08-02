@@ -25,6 +25,7 @@ type ApproStat = { id: string; quantite_recue: number; reste_a_recevoir: number;
 
 async function fetchAppro(): Promise<{ commandes: CmdRow[]; stats: Map<string, ApproStat>; pdfs: Map<string, string> }> {
   if (!supabaseConfigured()) return { commandes: [], stats: new Map(), pdfs: new Map() };
+  try {
   const supabase = createClient();
   const [cmdRes, statRes] = await Promise.all([
     supabase
@@ -45,6 +46,9 @@ async function fetchAppro(): Promise<{ commandes: CmdRow[]; stats: Map<string, A
     }
   }
   return { commandes, stats, pdfs };
+  } catch {
+    return { commandes: [], stats: new Map(), pdfs: new Map() };
+  }
 }
 
 function CmdTable({ rows, stats, pdfs, canWrite }: { rows: CmdRow[]; stats: Map<string, ApproStat>; pdfs: Map<string, string>; canWrite: boolean }) {

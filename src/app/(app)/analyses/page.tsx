@@ -18,6 +18,7 @@ type Row = {
 
 async function load(): Promise<{ analyses: Row[]; lots: { id: string; label: string }[] }> {
   if (!supabaseConfigured()) return { analyses: [], lots: [] };
+  try {
   const supabase = createClient();
   const [aRes, lRes] = await Promise.all([
     supabase
@@ -31,6 +32,9 @@ async function load(): Promise<{ analyses: Row[]; lots: { id: string; label: str
     analyses: (aRes.data as unknown as Row[]) ?? [],
     lots: ((lRes.data as any[]) ?? []).map((l) => ({ id: l.id as string, label: (l.numero_lot_fournisseur as string) ?? l.id })),
   };
+  } catch {
+    return { analyses: [], lots: [] };
+  }
 }
 
 export default async function AnalysesPage() {

@@ -43,6 +43,7 @@ const STATUT_LABEL: Record<string, string> = {
 
 async function fetchData(): Promise<{ commandes: CmdRow[]; expeditions: ExpRow[] }> {
   if (!supabaseConfigured()) return { commandes: [], expeditions: [] };
+  try {
   const supabase = createClient();
   const [cmdRes, expRes] = await Promise.all([
     supabase
@@ -61,6 +62,9 @@ async function fetchData(): Promise<{ commandes: CmdRow[]; expeditions: ExpRow[]
     commandes: (cmdRes.data as unknown as CmdRow[]) ?? [],
     expeditions: (expRes.data as unknown as ExpRow[]) ?? [],
   };
+  } catch {
+    return { commandes: [], expeditions: [] };
+  }
 }
 
 function CmdTable({ rows, action }: { rows: CmdRow[]; action: boolean }) {

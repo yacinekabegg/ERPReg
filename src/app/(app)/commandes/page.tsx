@@ -17,12 +17,16 @@ type CmdRow = {
 
 async function fetchCommandes(): Promise<CmdRow[]> {
   if (!supabaseConfigured()) return [];
-  const { data } = await createClient()
-    .from('commandes_clients')
-    .select('numero, date_commande, statut, clients(raison_sociale)')
-    .order('date_commande', { ascending: false })
-    .limit(20);
-  return (data as unknown as CmdRow[]) ?? [];
+  try {
+    const { data } = await createClient()
+      .from('commandes_clients')
+      .select('numero, date_commande, statut, clients(raison_sociale)')
+      .order('date_commande', { ascending: false })
+      .limit(20);
+    return (data as unknown as CmdRow[]) ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export default async function CommandesPage() {
