@@ -9,31 +9,31 @@ import {
   type CoaData,
 } from '@/lib/coa-template';
 
-const BRAND = '#1f7a5c';
+const BRAND = '#2eb2a4';
 const s = StyleSheet.create({
   page: { padding: 36, fontSize: 8.5, fontFamily: 'Helvetica', color: '#1a1d21', lineHeight: 1.35 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   title: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: BRAND, marginTop: 18 },
-  titleSub: { fontSize: 9, color: '#667085' },
+  titleSub: { fontSize: 9, color: '#666666' },
   company: { textAlign: 'right' },
   companyName: { fontFamily: 'Helvetica-Bold', color: BRAND, fontSize: 11 },
   meta: { marginTop: 16, marginBottom: 10 },
   metaRow: { flexDirection: 'row', marginBottom: 3 },
-  metaLabel: { width: 200, color: '#667085' },
+  metaLabel: { width: 200, color: '#666666' },
   metaVal: { fontFamily: 'Helvetica-Bold' },
   decl: { marginVertical: 10, fontSize: 7.5, color: '#333', textAlign: 'justify' },
-  declEn: { marginTop: 4, fontSize: 7.5, color: '#667085', textAlign: 'justify' },
+  declEn: { marginTop: 4, fontSize: 7.5, color: '#666666', textAlign: 'justify' },
   sectionTitle: {
     marginTop: 10, marginBottom: 2, fontFamily: 'Helvetica-Bold', color: BRAND,
     fontSize: 9.5, borderBottomWidth: 1, borderBottomColor: BRAND, paddingBottom: 2,
   },
   th: { flexDirection: 'row', backgroundColor: '#eef6f2', paddingVertical: 3, paddingHorizontal: 4 },
-  tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: '#e4e7ec', paddingVertical: 3, paddingHorizontal: 4 },
+  tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: '#e0e0e0', paddingVertical: 3, paddingHorizontal: 4 },
   cName: { width: '34%' },
-  cMethod: { width: '30%', color: '#667085' },
+  cMethod: { width: '30%', color: '#666666' },
   cCrit: { width: '14%' },
   cRes: { width: '14%', fontFamily: 'Helvetica-Bold' },
-  cUnit: { width: '8%', color: '#667085' },
+  cUnit: { width: '8%', color: '#666666' },
   thText: { fontFamily: 'Helvetica-Bold', fontSize: 7.5 },
   labelEn: { color: '#98a2b3', fontSize: 7 },
   footer: { marginTop: 22, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
@@ -124,7 +124,7 @@ export function CoaDocument({ data }: { data: CoaData }) {
             <Text>Le / on : {fmtDate(new Date().toISOString())}</Text>
           </View>
           <View style={s.sign}>
-            <Text style={{ color: '#667085' }}>{data.fonction}</Text>
+            <Text style={{ color: '#666666' }}>{data.fonction}</Text>
             <Text style={s.signName}>{data.signataire}</Text>
           </View>
         </View>

@@ -4,8 +4,8 @@
   "description": "Stock, qualité et expéditions Reggenerate®",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#f6f7f9",
-  "theme_color": "#1f7a5c",
+  "background_color": "#f7f4eb",
+  "theme_color": "#2eb2a4",
   "icons": [
     {
       "src": "/icons/icon.svg",

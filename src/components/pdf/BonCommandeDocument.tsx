@@ -14,7 +14,7 @@ export type BonCommandeData = {
   commentaires: string | null;
 };
 
-const BRAND = '#1f7a5c';
+const BRAND = '#2eb2a4';
 const s = StyleSheet.create({
   page: { padding: 40, fontSize: 10, fontFamily: 'Helvetica', color: '#1a1d21', lineHeight: 1.4 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
@@ -22,10 +22,10 @@ const s = StyleSheet.create({
   company: { textAlign: 'right' },
   companyName: { fontFamily: 'Helvetica-Bold', color: BRAND, fontSize: 12 },
   row: { flexDirection: 'row', marginBottom: 6, marginTop: 4 },
-  label: { width: 200, color: '#667085' },
+  label: { width: 200, color: '#666666' },
   val: { fontFamily: 'Helvetica-Bold' },
   block: { marginTop: 20 },
-  foot: { marginTop: 40, color: '#667085', fontSize: 9 },
+  foot: { marginTop: 40, color: '#666666', fontSize: 9 },
 });
 
 function fmt(d: string | null): string {

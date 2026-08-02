@@ -16,8 +16,10 @@ export default function Sidebar({
 
   return (
     <aside className="sidebar">
-      <div className="brand">
-        <span className="dot" /> Reggenerate
+      <div className="brand" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/circulegg-logo.png" alt="Circul'Egg" />
+        <span className="brand-sub">ERP Reggenerate</span>
       </div>
 
       {items.map((item) => {

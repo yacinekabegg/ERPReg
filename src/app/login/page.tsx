@@ -37,8 +37,10 @@ export default function LoginPage() {
   return (
     <div className="auth-wrap">
       <div className="card auth-card">
-        <div className="brand" style={{ padding: '0 0 16px' }}>
-          <span className="dot" /> ERP Reggenerate
+        <div className="brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/circulegg-logo.png" alt="Circul'Egg" />
+          <span className="brand-sub">ERP Reggenerate</span>
         </div>
         <p style={{ marginTop: 0, color: 'var(--muted)' }}>
           Connectez-vous pour accéder à votre espace.
